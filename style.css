@@ -1,5 +1,56 @@
 .brand-bg {
   background: linear-gradient(to left, #1a474f, #3a7d89);
   color: white;
-
 }
+
+        body {
+
+            background-color: #fdfdfd;
+            color: #222;
+            direction: rtl;
+            padding: 20px;
+            text-align: center;
+        }
+         .ncc {
+        
+        padding-top: 80px !important;
+        padding-bottom: 80px !important;
+    }
+
+        .tags h2 {
+            padding-bottom: 30px;
+            margin-bottom: 20px;
+            color: #ffffff;
+            /* لون ابيضٍ */
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            /* توسيط الأزرار */
+            gap: 10px;
+        }
+
+        .chips button,
+        .chips input.btn {
+            min-width: 100px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 20px;
+            border: none;
+            background-color: #0d6efd;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-align: center;
+        }
+
+        .chips button:hover,
+        .chips input.btn:hover {
+            background-color: #084298;
+        }
+   
+
+
+

@@ -8,8 +8,8 @@
             background-color: #fdfdfd;
             color: #222;
             direction: rtl;
-            padding: 20px;
-            text-align: center;
+          
+            /* text-align: center; */
         }
          .ncc {
         
@@ -50,7 +50,10 @@
         .chips input.btn:hover {
             background-color: #084298;
         }
-   
+  
 
 
+
+
+        
 

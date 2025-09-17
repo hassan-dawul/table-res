@@ -1,0 +1,27 @@
+[
+    {
+        "fullname": "Ali Ahmed",
+        "email": "ali@example.com",
+        "password": "Secret123"
+    },
+    {
+        "fullname": "Ali ali",
+        "email": "alimq@example.com",
+        "password": "Secret125"
+    },
+    {
+        "fullname": "Ali alim",
+        "email": "alimqkl@example.com",
+        "password": "Secret1258"
+    },
+    {
+        "fullname": "Ali alimdd",
+        "email": "alimqkdd@example.com",
+        "password": "Secret12598"
+    },
+    {
+        "fullname": "Ali alimdd",
+        "email": "alimqkddt@example.com",
+        "password": "Secret125987"
+    }
+]

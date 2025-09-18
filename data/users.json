@@ -1,27 +1,17 @@
 [
     {
-        "fullname": "Ali Ahmed",
-        "email": "ali@example.com",
-        "password": "Secret123"
-    },
-    {
         "fullname": "Ali ali",
         "email": "alimq@example.com",
-        "password": "Secret125"
+        "password": "$2b$12$8X/o2ZzKWKcuw4FjxCehFO8d2QDzyo.kUapJ7bBc85BAcCdr7CFIG"
     },
     {
         "fullname": "Ali alim",
-        "email": "alimqkl@example.com",
-        "password": "Secret1258"
+        "email": "alimqm@example.com",
+        "password": "$2b$12$iqQIxECvAP88rRb/uxc0AeoMJwv6slImisvhHpCSp5X1C6Pg8baFe"
     },
     {
-        "fullname": "Ali alimdd",
-        "email": "alimqkdd@example.com",
-        "password": "Secret12598"
-    },
-    {
-        "fullname": "Ali alimdd",
-        "email": "alimqkddt@example.com",
-        "password": "Secret125987"
+        "fullname": "Ali aliuo",
+        "email": "alimqom@example.com",
+        "password": "$2b$12$3lhjx9c/pNu0UB1rgVs7NObuwewygaRkGTGwbO2F8B3qg9b2pnr7S"
     }
 ]

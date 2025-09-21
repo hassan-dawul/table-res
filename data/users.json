@@ -13,5 +13,17 @@
         "fullname": "Ali aliuo",
         "email": "alimqom@example.com",
         "password": "$2b$12$3lhjx9c/pNu0UB1rgVs7NObuwewygaRkGTGwbO2F8B3qg9b2pnr7S"
+    },
+    {
+        "fullname": "Ali aliuomm",
+        "email": "alimqomo@example.com",
+        "password": "$2b$12$/2LIeGa6eV3Z5Rjr2Zh/f.vG8Ktg4eaKbTEplRYExTfiEjzeNGIoy",
+        "token": "b713045370f97ca3d466f508ca2791f8"
+    },
+    {
+        "fullname": "Ali aliuommi",
+        "email": "alimqomoo@example.com",
+        "password": "$2b$12$f/l2Uudt/nMAY8qNheG8wOXx23steIaWs3zs88/zdpb7aDWvIwYIi",
+        "token": "37c6e1675eac7ce25237bf4ad7b0972d"
     }
 ]

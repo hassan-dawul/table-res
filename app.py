@@ -1,7 +1,8 @@
 import os
 import json
-import bcrypt  # 🔒 جديد: استيراد مكتبة التشفير
-from fastapi import FastAPI, HTTPException, Query, Request
+import bcrypt  # 🔒 تشفير كلمات المرور
+import secrets  # 🔐 لتوليد توكن عشوائي
+from fastapi import FastAPI, HTTPException, Query, Request, Header
 from fastapi.responses import JSONResponse
 from typing import Optional
 
@@ -61,7 +62,7 @@ def get_restaurant_by_id(restaurant_id: int):
             return {"status": "success", "data": restaurant}
     raise HTTPException(status_code=404, detail="المطعم غير موجود")
 
-# ✅ تسجيل مستخدم جديد مع تشفير كلمة المرور
+# ✅ تسجيل مستخدم جديد مع تشفير كلمة المرور وتوليد توكن
 @app.post("/register", status_code=201)
 async def register_user(request: Request):
     data = await request.json()
@@ -94,13 +95,17 @@ async def register_user(request: Request):
             content={"status": "error", "message": "البريد الإلكتروني مستخدم بالفعل."}
         )
 
-    # 🔒 جديد: تشفير كلمة المرور قبل الحفظ
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')  # 🔒 جديد
+    # 🔒 تشفير كلمة المرور قبل الحفظ
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # 🔐 توليد توكن عشوائي وتخزينه مع المستخدم
+    token = secrets.token_hex(16)
 
     new_user = {
         "fullname": fullname,
         "email": email,
-        "password": hashed_password  # 🔒 جديد: حفظ الكلمة بشكل مشفّر
+        "password": hashed_password,
+        "token": token  # تخزين التوكن
     }
     users.append(new_user)
     write_json_file(USERS_FILE, users)
@@ -110,11 +115,12 @@ async def register_user(request: Request):
         content={
             "status": "ok",
             "fullname": fullname,
-            "email": email
+            "email": email,
+            "token": token  # إرسال التوكن للعميل
         }
     )
 
-# ✅ تسجيل الدخول مع مقارنة كلمة المرور المشفرة
+# ✅ تسجيل الدخول مع التحقق من كلمة المرور وتوليد توكن جديد
 @app.post("/login")
 async def login_user(request: Request):
     data = await request.json()
@@ -130,17 +136,25 @@ async def login_user(request: Request):
 
     users = read_json_file(USERS_FILE)
 
-    # 🔒 جديد: البحث عن المستخدم بالبريد فقط
-    user = next((u for u in users if u["email"] == email), None)  # 🔒 جديد
+    # البحث عن المستخدم بالبريد فقط
+    user = next((u for u in users if u["email"] == email), None)
 
-    # 🔒 جديد: التحقق من مطابقة كلمة المرور المشفّرة
-    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):  # 🔒 جديد
+    # التحقق من مطابقة كلمة المرور المشفّرة
+    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        # توليد توكن جديد وتحديثه
+        token = secrets.token_hex(16)
+        user["token"] = token
+
+        # تحديث ملف المستخدمين
+        write_json_file(USERS_FILE, users)
+
         return JSONResponse(
             status_code=200,
             content={
                 "status": "ok",
                 "message": "تم تسجيل الدخول بنجاح",
-                "email": email
+                "email": email,
+                "token": token  # إرسال التوكن للعميل
             }
         )
     else:
@@ -152,11 +166,18 @@ async def login_user(request: Request):
             }
         )
 
-# عرض ملف المستخدم حسب البريد
+# عرض ملف المستخدم حسب التوكن المرسل في الهيدر
 @app.get("/profile")
-async def get_profile(email: str):
+async def get_profile(authorization: Optional[str] = Header(None)):
+    # التحقق من وجود هيدر Authorization وبداية 'Bearer '
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="الرمز غير موجود أو غير صالح.")
+
+    token = authorization.replace("Bearer ", "").strip()
+
     users = read_json_file(USERS_FILE)
-    user = next((u for u in users if u["email"] == email), None)
+    user = next((u for u in users if u.get("token") == token), None)
+
     if user:
         return {
             "status": "success",
@@ -166,4 +187,4 @@ async def get_profile(email: str):
             }
         }
     else:
-        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")

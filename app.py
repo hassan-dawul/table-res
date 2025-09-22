@@ -1,70 +1,61 @@
-import os
-import json
-import bcrypt  # 🔒 تشفير كلمات المرور
-import secrets  # 🔐 لتوليد توكن عشوائي
-from fastapi import FastAPI, HTTPException, Query, Request, Header
+from fastapi import FastAPI, HTTPException, Query, Request, Header, Depends
 from fastapi.responses import JSONResponse
 from typing import Optional
+from sqlalchemy.orm import Session
+import bcrypt
+import secrets
 
-DATA_DIR = "data"
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
-RESTAURANTS_FILE = os.path.join(DATA_DIR, "restaurants.json")
+# ✅ استيراد الاتصال وقاعدة البيانات
+from db import SessionLocal, engine
+from models import Base, User, Restaurant
 
-# إنشاء المجلد والملفات في حال عدم وجودها
-def ensure_data_files():
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-    if not os.path.isfile(USERS_FILE):
-        with open(USERS_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f, ensure_ascii=False)
-    if not os.path.isfile(RESTAURANTS_FILE):
-        with open(RESTAURANTS_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f, ensure_ascii=False)
-
-# قراءة وكتابة JSON
-def read_json_file(filepath):
-    with open(filepath, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def write_json_file(filepath, data):
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-# تهيئة التطبيق
+# ✅ إنشاء تطبيق FastAPI
 app = FastAPI()
 
-# التأكد من وجود الملفات عند التشغيل
+# ✅ عند بدء التطبيق، أنشئ الجداول تلقائيًا إذا لم تكن موجودة
 @app.on_event("startup")
 def startup_event():
-    ensure_data_files()
+    Base.metadata.create_all(bind=engine)
 
-# نقطة اختبار للتأكد أن الـ API تعمل
+# ✅ دالة Dependency لإعطاء جلسة قاعدة البيانات لكل Request
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ✅ نقطة اختبار للتأكد من عمل الـ API
 @app.get("/ok")
 async def ok():
     return JSONResponse(content={"status": "success", "message": "The API is working."})
 
-# استرجاع قائمة المطاعم مع فلاتر اختيارية
+# ✅ استرجاع قائمة المطاعم مع فلاتر اختيارية
 @app.get("/restaurants")
-def get_restaurants(area: Optional[str] = Query(None), cuisine: Optional[str] = Query(None)):
-    restaurants = read_json_file(RESTAURANTS_FILE)
+def get_restaurants(
+    area: Optional[str] = Query(None),
+    cuisine: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Restaurant)
     if area:
-        restaurants = [r for r in restaurants if r.get("area") == area]
+        query = query.filter(Restaurant.area == area)
     if cuisine:
-        restaurants = [r for r in restaurants if r.get("cuisine") == cuisine]
-    return {"status": "success", "data": restaurants}
+        query = query.filter(Restaurant.cuisine == cuisine)
+    restaurants = query.all()
+    return {"status": "success", "data": [r.__dict__ for r in restaurants]}
 
-# تفاصيل مطعم معين
+# ✅ تفاصيل مطعم معين
 @app.get("/restaurants/{restaurant_id}")
-def get_restaurant_by_id(restaurant_id: int):
-    restaurants = read_json_file(RESTAURANTS_FILE)
-    for restaurant in restaurants:
-        if restaurant.get("id") == restaurant_id:
-            return {"status": "success", "data": restaurant}
+def get_restaurant_by_id(restaurant_id: int, db: Session = Depends(get_db)):
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if restaurant:
+        return {"status": "success", "data": restaurant.__dict__}
     raise HTTPException(status_code=404, detail="المطعم غير موجود")
 
-# ✅ تسجيل مستخدم جديد مع تشفير كلمة المرور وتوليد توكن
+# ✅ تسجيل مستخدم جديد
 @app.post("/register", status_code=201)
-async def register_user(request: Request):
+async def register_user(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
 
     fullname = data.get("fullname")
@@ -72,119 +63,73 @@ async def register_user(request: Request):
     password = data.get("password")
     password_confirmation = data.get("password_confirmation")
 
-    # التحقق من أن جميع الحقول موجودة
     if not all([fullname, email, password, password_confirmation]):
-        return JSONResponse(
-            status_code=400,
-            content={"status": "error", "message": "جميع الحقول مطلوبة."}
-        )
+        return JSONResponse(status_code=400, content={"status": "error", "message": "جميع الحقول مطلوبة."})
 
-    # التأكد من تطابق كلمتي المرور
     if password != password_confirmation:
-        return JSONResponse(
-            status_code=400,
-            content={"status": "error", "message": "كلمتا المرور غير متطابقتين."}
-        )
+        return JSONResponse(status_code=400, content={"status": "error", "message": "كلمتا المرور غير متطابقتين."})
 
-    users = read_json_file(USERS_FILE)
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        return JSONResponse(status_code=409, content={"status": "error", "message": "البريد الإلكتروني مستخدم بالفعل."})
 
-    # التحقق من أن البريد غير مستخدم مسبقًا
-    if any(user["email"] == email for user in users):
-        return JSONResponse(
-            status_code=409,
-            content={"status": "error", "message": "البريد الإلكتروني مستخدم بالفعل."}
-        )
-
-    # 🔒 تشفير كلمة المرور قبل الحفظ
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    # 🔐 توليد توكن عشوائي وتخزينه مع المستخدم
     token = secrets.token_hex(16)
 
-    new_user = {
+    new_user = User(fullname=fullname, email=email, password=hashed_password, token=token)
+    db.add(new_user)
+    db.commit()
+
+    return JSONResponse(status_code=201, content={
+        "status": "ok",
         "fullname": fullname,
         "email": email,
-        "password": hashed_password,
-        "token": token  # تخزين التوكن
-    }
-    users.append(new_user)
-    write_json_file(USERS_FILE, users)
+        "token": token
+    })
 
-    return JSONResponse(
-        status_code=201,
-        content={
-            "status": "ok",
-            "fullname": fullname,
-            "email": email,
-            "token": token  # إرسال التوكن للعميل
-        }
-    )
-
-# ✅ تسجيل الدخول مع التحقق من كلمة المرور وتوليد توكن جديد
+# ✅ تسجيل الدخول
 @app.post("/login")
-async def login_user(request: Request):
+async def login_user(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
-
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
-        return JSONResponse(
-            status_code=400,
-            content={"status": "error", "message": "البريد الإلكتروني وكلمة المرور مطلوبة."}
-        )
+        return JSONResponse(status_code=400, content={"status": "error", "message": "البريد الإلكتروني وكلمة المرور مطلوبة."})
 
-    users = read_json_file(USERS_FILE)
+    user = db.query(User).filter(User.email == email).first()
 
-    # البحث عن المستخدم بالبريد فقط
-    user = next((u for u in users if u["email"] == email), None)
-
-    # التحقق من مطابقة كلمة المرور المشفّرة
-    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
-        # توليد توكن جديد وتحديثه
+    if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         token = secrets.token_hex(16)
-        user["token"] = token
+        user.token = token
+        db.commit()
 
-        # تحديث ملف المستخدمين
-        write_json_file(USERS_FILE, users)
+        return JSONResponse(status_code=200, content={
+            "status": "ok",
+            "message": "تم تسجيل الدخول بنجاح",
+            "email": email,
+            "token": token
+        })
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "ok",
-                "message": "تم تسجيل الدخول بنجاح",
-                "email": email,
-                "token": token  # إرسال التوكن للعميل
-            }
-        )
-    else:
-        return JSONResponse(
-            status_code=401,
-            content={
-                "status": "error",
-                "message": "بيانات الدخول غير صحيحة"
-            }
-        )
+    return JSONResponse(status_code=401, content={"status": "error", "message": "بيانات الدخول غير صحيحة"})
 
-# عرض ملف المستخدم حسب التوكن المرسل في الهيدر
+# ✅ عرض ملف المستخدم حسب التوكن
 @app.get("/profile")
-async def get_profile(authorization: Optional[str] = Header(None)):
-    # التحقق من وجود هيدر Authorization وبداية 'Bearer '
+async def get_profile(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="الرمز غير موجود أو غير صالح.")
 
     token = authorization.replace("Bearer ", "").strip()
-
-    users = read_json_file(USERS_FILE)
-    user = next((u for u in users if u.get("token") == token), None)
+    user = db.query(User).filter(User.token == token).first()
 
     if user:
         return {
             "status": "success",
             "data": {
-                "fullname": user["fullname"],
-                "email": user["email"]
+                "fullname": user.fullname,
+                "email": user.email
             }
         }
-    else:
-        raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")
+
+    raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")
+

@@ -1,25 +1,22 @@
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from db import Base  # تأكد إن Base مستورد من db
 
-# تعريف قاعدة الـ ORM
-Base = declarative_base()
-
-# جدول المستخدمين
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    fullname = Column(String(100))
+    email = Column(String(100), unique=True)
+    password = Column(String(100))
+    token = Column(String(100))
+    last_login = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    id = Column(Integer, primary_key=True, index=True)
-    fullname = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False, index=True)
-    password = Column(String(255), nullable=False)
-    token = Column(String(100), nullable=True)
-
-
-# جدول المطاعم
+# ✨ إضافة فئة Restaurant
 class Restaurant(Base):
-    __tablename__ = "restaurants"
-
-    id = Column(Integer, primary_key=True, index=True)
+    __tablename__ = 'restaurants'
+    id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     area = Column(String(100), nullable=False)
     cuisine = Column(String(100), nullable=False)

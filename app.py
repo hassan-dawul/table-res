@@ -9,6 +9,18 @@ import secrets
 from pydantic import BaseModel, validator, EmailStr
 from db import SessionLocal, engine, Base
 from models import User, Restaurant
+from enum import Enum
+from pydantic import conint
+from datetime import date as date_type, time as time_type
+from fastapi import HTTPException
+from typing import Optional
+from sqlalchemy.orm import Session
+from models import User
+
+
+# استيراد موديل الحجز و enum الخاص بالحالة
+from models import Booking, BookingStatus
+
 
 app = FastAPI()
 
@@ -288,6 +300,225 @@ async def get_profile(authorization: Optional[str] = Header(None), db: Session =
         }
     
     raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")
+
+def get_current_user(authorization: Optional[str], db: Session):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="الرمز غير موجود.")
+
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="صيغة التوكن غير صحيحة.")
+
+    token = parts[1]
+    user = db.query(User).filter(User.token == token).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="توكن غير صالح أو غير موجود.")
+
+    return user
+
+
+# حالة الحجز (enum)
+class BookingStatus(str, Enum):
+    confirmed = "confirmed"
+    cancelled = "cancelled"
+
+# موديل لإنشاء حجز جديد
+class BookingCreate(BaseModel):
+    restaurant_id: int
+    date: str  # YYYY-MM-DD
+    time: str  # HH:MM
+    people: conint(gt=0)
+
+    @validator('date')
+    def validate_date(cls, v):
+        try:
+            d = datetime.strptime(v, "%Y-%m-%d").date()
+            if d < datetime.utcnow().date():
+                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")
+            return v
+        except:
+            raise ValueError("صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
+
+    @validator('time')
+    def validate_time(cls, v):
+        try:
+            datetime.strptime(v, "%H:%M").time()
+            return v
+        except:
+            raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
+
+# موديل لتحديث الحجز (جزئي)
+class BookingUpdate(BaseModel):
+    date: Optional[str]
+    time: Optional[str]
+    people: Optional[conint(gt=0)]
+
+    @validator('date')
+    def validate_date(cls, v):
+        if v is None:
+            return v
+        try:
+            d = datetime.strptime(v, "%Y-%m-%d").date()
+            if d < datetime.utcnow().date():
+                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")
+            return v
+        except:
+            raise ValueError("صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
+
+    @validator('time')
+    def validate_time(cls, v):
+        if v is None:
+            return v
+        try:
+            datetime.strptime(v, "%H:%M").time()
+            return v
+        except:
+            raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
+
+# إنشاء حجز جديد
+@app.post("/bookings", status_code=201)
+async def create_booking(
+    booking: BookingCreate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(authorization, db)
+
+    restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="المطعم غير موجود.")
+
+    booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
+    booking_time = datetime.strptime(booking.time, "%H:%M").time()
+
+    if booking_date == datetime.utcnow().date() and booking_time <= datetime.utcnow().time():
+        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ.")
+
+    if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:
+        raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
+
+    existing_bookings = db.query(Booking).filter(
+        Booking.restaurant_id == restaurant.id,
+        Booking.date == booking_date,
+        Booking.time == booking_time,
+        Booking.status == BookingStatus.confirmed
+    ).all()
+
+    total_people = sum(b.people for b in existing_bookings) + booking.people
+    if total_people > restaurant.capacity:
+        raise HTTPException(status_code=400, detail="السعة غير كافية لهذا الوقت.")
+
+    new_booking = Booking(
+        restaurant_id=restaurant.id,
+        user_id=user.id,
+        date=booking_date,
+        time=booking_time,
+        people=booking.people,
+        status=BookingStatus.confirmed
+    )
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking)
+
+    return {"status": "success", "booking_id": new_booking.id}
+
+# استعراض كل حجوزات المستخدم
+@app.get("/bookings")
+def list_user_bookings(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    user = get_current_user(authorization, db)
+    bookings = db.query(Booking).filter(Booking.user_id == user.id).all()
+    return {
+        "status": "success",
+        "data": [{
+            "id": b.id,
+            "restaurant_id": b.restaurant_id,
+            "date": b.date.isoformat(),
+            "time": b.time.strftime("%H:%M"),
+            "people": b.people,
+            "status": b.status.value,
+            "created_at": b.created_at.isoformat(),
+            "updated_at": b.updated_at.isoformat()
+        } for b in bookings]
+    }
+
+# استعراض حجز معين
+@app.get("/bookings/{booking_id}")
+def get_booking_by_id(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    user = get_current_user(authorization, db)
+    booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="الحجز غير موجود.")
+    return {
+        "status": "success",
+        "data": {
+            "id": booking.id,
+            "restaurant_id": booking.restaurant_id,
+            "date": booking.date.isoformat(),
+            "time": booking.time.strftime("%H:%M"),
+            "people": booking.people,
+            "status": booking.status.value,
+            "created_at": booking.created_at.isoformat(),
+            "updated_at": booking.updated_at.isoformat()
+        }
+    }
+
+# تحديث الحجز
+@app.put("/bookings/{booking_id}")
+def update_booking(
+    booking_id: int,
+    booking_update: BookingUpdate,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(authorization, db)
+    booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="الحجز غير موجود.")
+
+    date_val = booking_update.date or booking.date.isoformat()
+    time_val = booking_update.time or booking.time.strftime("%H:%M")
+    people_val = booking_update.people if booking_update.people is not None else booking.people
+
+    new_date = datetime.strptime(date_val, "%Y-%m-%d").date()
+    new_time = datetime.strptime(time_val, "%H:%M").time()
+
+    if new_date == datetime.utcnow().date() and new_time <= datetime.utcnow().time():
+        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ.")
+
+    restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
+    if new_time < restaurant.opens_at or new_time >= restaurant.closes_at:
+        raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
+
+    existing_bookings = db.query(Booking).filter(
+        Booking.restaurant_id == restaurant.id,
+        Booking.date == new_date,
+        Booking.time == new_time,
+        Booking.status == BookingStatus.confirmed,
+        Booking.id != booking.id
+    ).all()
+
+    total_people = sum(b.people for b in existing_bookings) + people_val
+    if total_people > restaurant.capacity:
+        raise HTTPException(status_code=400, detail="السعة غير كافية لهذا الوقت.")
+
+    booking.date = new_date
+    booking.time = new_time
+    booking.people = people_val
+    db.commit()
+    db.refresh(booking)
+
+    return {"status": "success", "message": "تم تحديث الحجز بنجاح"}
+
+# إلغاء الحجز (تغيير الحالة)
+@app.delete("/bookings/{booking_id}")
+def cancel_booking(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    user = get_current_user(authorization, db)
+    booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="الحجز غير موجود.")
+    booking.status = BookingStatus.cancelled
+    db.commit()
+    return {"status": "success", "message": "تم إلغاء الحجز بنجاح"}
 
 
 

@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Time
+from sqlalchemy import Column, Integer, String, DateTime, Time, Enum, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from enum import Enum as PyEnum
 from db import Base  # تأكد إن Base مستورد من db
 
 class User(Base):
@@ -13,6 +15,8 @@ class User(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
+    bookings = relationship("Booking", back_populates="user")
+
 class Restaurant(Base):
     __tablename__ = 'restaurants'
     id = Column(Integer, primary_key=True)
@@ -25,4 +29,24 @@ class Restaurant(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
+    bookings = relationship("Booking", back_populates="restaurant")
 
+# تعريف enum لحالة الحجز
+class BookingStatus(PyEnum):
+    confirmed = "confirmed"
+    cancelled = "cancelled"
+
+class Booking(Base):
+    __tablename__ = 'bookings'
+    id = Column(Integer, primary_key=True)
+    restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(DateTime, nullable=False)  # ممكن تستخدم Date فقط لو تحب
+    time = Column(Time, nullable=False)
+    people = Column(Integer, nullable=False)
+    status = Column(Enum(BookingStatus), nullable=False, default=BookingStatus.confirmed)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="bookings")
+    restaurant = relationship("Restaurant", back_populates="bookings")

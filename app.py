@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv  # NEW
 from fastapi import FastAPI, HTTPException, Query, Request, Header, Depends, Body
 from fastapi.responses import JSONResponse
 from typing import Optional, List
@@ -5,22 +7,20 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import bcrypt
 import secrets
+import jwt  # NEW
 
 from pydantic import BaseModel, validator, EmailStr
 from db import SessionLocal, engine, Base
-from models import User, Restaurant
+from models import User, Restaurant, Booking, BookingStatus  # NEW
 from enum import Enum
 from pydantic import conint
 from datetime import date as date_type, time as time_type
 from fastapi import HTTPException
 from typing import Optional
 from sqlalchemy.orm import Session
-from models import User
 
-
-# استيراد موديل الحجز و enum الخاص بالحالة
-from models import Booking, BookingStatus
-
+# تحميل المتغيرات من ملف .env
+load_dotenv()  # NEW
 
 app = FastAPI()
 
@@ -36,6 +36,34 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# دالة لتشفير كلمة السر
+def hash_password(password: str) -> str:  # NEW
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+# دالة لفك تشفير كلمة السر
+def verify_password(plain_password: str, hashed_password: str) -> bool:  # NEW
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+# دالة لتوليد JWT
+def create_access_token(data: dict, expires_delta: Optional[int] = None):  # NEW
+    import datetime
+    to_encode = data.copy()
+    expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=expires_delta or 30)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, os.getenv("ACCESS_TOKEN_SECRET"), algorithm="HS256")
+    return encoded_jwt
+# دالة التحقق من صلاحية الأدمن
+def admin_required(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+) -> User:
+    user = get_current_user(authorization, db)
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول إلى هذا المورد.")
+    return user
 
 # Pydantic Models
 class RestaurantCreate(BaseModel):
@@ -149,7 +177,11 @@ def get_restaurant_by_id(restaurant_id: int, db: Session = Depends(get_db)):
 
 # المطاعم - إنشاء مطعم
 @app.post("/restaurants", status_code=201)
-async def create_restaurant(restaurant: RestaurantCreate = Body(...), db: Session = Depends(get_db)):
+async def create_restaurant(
+    restaurant: RestaurantCreate = Body(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_required)  # NEW: السماح للادمن فقط
+):
     opens_time = datetime.strptime(restaurant.opens_at, "%H:%M").time()
     closes_time = datetime.strptime(restaurant.closes_at, "%H:%M").time()
 
@@ -180,7 +212,12 @@ async def create_restaurant(restaurant: RestaurantCreate = Body(...), db: Sessio
 
 # المطاعم - تحديث مطعم
 @app.put("/restaurants/{restaurant_id}")
-async def update_restaurant(restaurant_id: int, restaurant_update: RestaurantUpdate = Body(...), db: Session = Depends(get_db)):
+async def update_restaurant(
+    restaurant_id: int,
+    restaurant_update: RestaurantUpdate = Body(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_required)  # NEW: السماح للادمن فقط
+):
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
@@ -215,7 +252,11 @@ async def update_restaurant(restaurant_id: int, restaurant_update: RestaurantUpd
 
 # المطاعم - حذف مطعم
 @app.delete("/restaurants/{restaurant_id}")
-def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
+def delete_restaurant(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_required)  # NEW: فقط الادمن يمكنه حذف المطاعم
+):
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
@@ -223,6 +264,7 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
     db.delete(restaurant)
     db.commit()
     return {"status": "success", "message": "تم حذف المطعم بنجاح"}
+
 
 # تسجيل مستخدم جديد
 @app.post("/register", status_code=201)
@@ -235,9 +277,17 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
         return JSONResponse(status_code=409, content={"status": "error", "message": "البريد الإلكتروني مستخدم بالفعل."})
 
     hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    token = secrets.token_hex(16)
+    token = secrets.token_hex(16)  # NEW: إنشاء توكن عشوائي لتوثيق المستخدم
 
-    new_user = User(fullname=user.fullname, email=user.email, password=hashed_password, token=token, created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+    new_user = User(
+        fullname=user.fullname,
+        email=user.email,
+        password=hashed_password,
+        token=token,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+        role="user"  # NEW: تعيين الدور الافتراضي للمستخدم (مستخدم عادي)
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -248,6 +298,7 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
         "email": new_user.email,
         "token": new_user.token
     })
+
 
 # تسجيل الدخول
 @app.post("/login")
@@ -260,7 +311,7 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == email).first()
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        token = secrets.token_hex(16)
+        token = secrets.token_hex(16)  # NEW: توليد توكن جديد عند تسجيل الدخول
         user.token = token
         user.last_login = datetime.utcnow()
         db.commit()
@@ -274,19 +325,23 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
         })
     return JSONResponse(status_code=401, content={"status": "error", "message": "بيانات الدخول غير صحيحة"})
 
+
 # عرض ملف المستخدم حسب التوكن (Authorization Bearer Token)
 @app.get("/profile")
-async def get_profile(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+async def get_profile(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
     if not authorization:
         raise HTTPException(status_code=401, detail="الرمز غير موجود أو غير صالح.")
 
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
         raise HTTPException(status_code=401, detail="الرمز غير موجود أو غير صالح.")
-    
+
     token = parts[1].strip()
     user = db.query(User).filter(User.token == token).first()
-    
+
     if user:
         return {
             "status": "success",
@@ -295,12 +350,15 @@ async def get_profile(authorization: Optional[str] = Header(None), db: Session =
                 "email": user.email,
                 "last_login": user.last_login.isoformat() if user.last_login else None,
                 "created_at": user.created_at.isoformat() if user.created_at else None,
-                "updated_at": user.updated_at.isoformat() if user.updated_at else None
+                "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+                "role": user.role  # NEW: إضافة عرض الدور
             }
         }
-    
+
     raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")
 
+
+# دالة مساعدة لجلب المستخدم الحالي من التوكن
 def get_current_user(authorization: Optional[str], db: Session):
     if not authorization:
         raise HTTPException(status_code=401, detail="الرمز غير موجود.")
@@ -327,14 +385,14 @@ class BookingCreate(BaseModel):
     restaurant_id: int
     date: str  # YYYY-MM-DD
     time: str  # HH:MM
-    people: conint(gt=0)
+    people: conint(gt=0)  # pyright: ignore[reportInvalidTypeForm] # NEW: التحقق من أن عدد الأشخاص أكبر من صفر
 
     @validator('date')
     def validate_date(cls, v):
         try:
             d = datetime.strptime(v, "%Y-%m-%d").date()
             if d < datetime.utcnow().date():
-                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")
+                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")  # NEW: منع الحجز في الماضي
             return v
         except:
             raise ValueError("صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
@@ -351,7 +409,7 @@ class BookingCreate(BaseModel):
 class BookingUpdate(BaseModel):
     date: Optional[str]
     time: Optional[str]
-    people: Optional[conint(gt=0)]
+    people: Optional[conint(gt=0)]  # pyright: ignore[reportInvalidTypeForm] # NEW: التحقق من أن عدد الأشخاص أكبر من صفر
 
     @validator('date')
     def validate_date(cls, v):
@@ -360,7 +418,7 @@ class BookingUpdate(BaseModel):
         try:
             d = datetime.strptime(v, "%Y-%m-%d").date()
             if d < datetime.utcnow().date():
-                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")
+                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")  # NEW: منع التحديث لتاريخ ماضي
             return v
         except:
             raise ValueError("صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
@@ -382,7 +440,7 @@ async def create_booking(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ):
-    user = get_current_user(authorization, db)
+    user = get_current_user(authorization, db)  # NEW: التأكد من توكن المستخدم لجلب بياناته
 
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
@@ -391,12 +449,15 @@ async def create_booking(
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
     booking_time = datetime.strptime(booking.time, "%H:%M").time()
 
+    # NEW: منع الحجز في وقت ماضي في نفس اليوم
     if booking_date == datetime.utcnow().date() and booking_time <= datetime.utcnow().time():
         raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ.")
 
+    # NEW: التأكد من أن وقت الحجز داخل ساعات عمل المطعم
     if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:
         raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
 
+    # NEW: حساب إجمالي عدد الأشخاص في نفس الوقت للتأكد من السعة
     existing_bookings = db.query(Booking).filter(
         Booking.restaurant_id == restaurant.id,
         Booking.date == booking_date,
@@ -410,11 +471,11 @@ async def create_booking(
 
     new_booking = Booking(
         restaurant_id=restaurant.id,
-        user_id=user.id,
+        user_id=user.id,  # NEW: ربط الحجز بالمستخدم الحالي
         date=booking_date,
         time=booking_time,
         people=booking.people,
-        status=BookingStatus.confirmed
+        status=BookingStatus.confirmed  # NEW: تعيين حالة الحجز مؤكدة بشكل افتراضي
     )
     db.add(new_booking)
     db.commit()
@@ -425,7 +486,7 @@ async def create_booking(
 # استعراض كل حجوزات المستخدم
 @app.get("/bookings")
 def list_user_bookings(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)
+    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم لجلب بياناته
     bookings = db.query(Booking).filter(Booking.user_id == user.id).all()
     return {
         "status": "success",
@@ -435,7 +496,7 @@ def list_user_bookings(authorization: Optional[str] = Header(None), db: Session 
             "date": b.date.isoformat(),
             "time": b.time.strftime("%H:%M"),
             "people": b.people,
-            "status": b.status.value,
+            "status": b.status.value,  # NEW: عرض حالة الحجز (confirmed أو cancelled)
             "created_at": b.created_at.isoformat(),
             "updated_at": b.updated_at.isoformat()
         } for b in bookings]
@@ -444,7 +505,7 @@ def list_user_bookings(authorization: Optional[str] = Header(None), db: Session 
 # استعراض حجز معين
 @app.get("/bookings/{booking_id}")
 def get_booking_by_id(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)
+    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
@@ -456,7 +517,7 @@ def get_booking_by_id(booking_id: int, authorization: Optional[str] = Header(Non
             "date": booking.date.isoformat(),
             "time": booking.time.strftime("%H:%M"),
             "people": booking.people,
-            "status": booking.status.value,
+            "status": booking.status.value,  # NEW: عرض حالة الحجز
             "created_at": booking.created_at.isoformat(),
             "updated_at": booking.updated_at.isoformat()
         }
@@ -470,7 +531,7 @@ def update_booking(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ):
-    user = get_current_user(authorization, db)
+    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
@@ -482,13 +543,17 @@ def update_booking(
     new_date = datetime.strptime(date_val, "%Y-%m-%d").date()
     new_time = datetime.strptime(time_val, "%H:%M").time()
 
+    # NEW: منع تحديث الحجز إلى وقت ماضي في نفس اليوم
     if new_date == datetime.utcnow().date() and new_time <= datetime.utcnow().time():
         raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ.")
 
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
+
+    # NEW: التحقق من أن وقت الحجز داخل ساعات عمل المطعم
     if new_time < restaurant.opens_at or new_time >= restaurant.closes_at:
         raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
 
+    # NEW: التأكد من أن السعة متاحة عند التحديث (باستثناء الحجز الحالي)
     existing_bookings = db.query(Booking).filter(
         Booking.restaurant_id == restaurant.id,
         Booking.date == new_date,
@@ -512,11 +577,11 @@ def update_booking(
 # إلغاء الحجز (تغيير الحالة)
 @app.delete("/bookings/{booking_id}")
 def cancel_booking(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)
+    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
-    booking.status = BookingStatus.cancelled
+    booking.status = BookingStatus.cancelled  # NEW: تغيير حالة الحجز إلى ملغي بدل الحذف
     db.commit()
     return {"status": "success", "message": "تم إلغاء الحجز بنجاح"}
 

@@ -14,6 +14,9 @@ class User(Base):
     last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    role = Column(String(50), default="user", nullable=False)
+
+
 
     bookings = relationship("Booking", back_populates="user")
 

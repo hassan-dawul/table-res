@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv  # NEW
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Header, Depends, Body
 from fastapi.responses import JSONResponse
 from typing import Optional, List
@@ -7,22 +7,50 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import bcrypt
 import secrets
-import jwt  # NEW
+import jwt
 
 from pydantic import BaseModel, validator, EmailStr
 from db import SessionLocal, engine, Base
-from models import User, Restaurant, Booking, BookingStatus  # NEW
+from models import User, Restaurant, Booking, BookingStatus
 from enum import Enum
 from pydantic import conint
 from datetime import date as date_type, time as time_type
-from fastapi import HTTPException
-from typing import Optional
-from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # تحميل المتغيرات من ملف .env
-load_dotenv()  # NEW
+load_dotenv()
 
+# إنشاء Limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# إنشاء التطبيق
 app = FastAPI()
+
+# تعيين limiter في app.state
+app.state.limiter = limiter
+
+
+# إضافة middleware الخاص بـ slowapi
+app.add_middleware(SlowAPIMiddleware)
+
+# معالج خطأ تجاوز الحد (rate limit)
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "status": "error",
+            "message": "لقد وصلت للحد المسموح من المحاولات، يرجى الانتظار دقيقة ثم المحاولة مجدداً."
+        }
+    )
+
+# هنا بعدين تضيف باقي الراوتات والدوال مثل تسجيل الدخول، الحجز، الخ...
+
+
+
 
 # إنشاء الجداول عند بدء التشغيل
 @app.on_event("startup")
@@ -300,8 +328,10 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
     })
 
 
+
 # تسجيل الدخول
 @app.post("/login")
+@limiter.limit("5/minute")
 async def login_user(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     email = data.get("email")
@@ -311,7 +341,7 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == email).first()
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        token = secrets.token_hex(16)  # NEW: توليد توكن جديد عند تسجيل الدخول
+        token = secrets.token_hex(16)
         user.token = token
         user.last_login = datetime.utcnow()
         db.commit()
@@ -588,4 +618,4 @@ def cancel_booking(booking_id: int, authorization: Optional[str] = Header(None),
 
 
 
-
+FastAPI

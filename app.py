@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Header, Depends, Body
 from fastapi.responses import JSONResponse
 from typing import Optional, List
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime
 import bcrypt
@@ -19,6 +20,9 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+
 
 # تحميل المتغيرات من ملف .env
 load_dotenv()
@@ -28,6 +32,17 @@ limiter = Limiter(key_func=get_remote_address)
 
 # إنشاء التطبيق
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # allow all methods
+    allow_headers=["*"],  # allow all headers
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")  
+# ربط ملفات static (مثل css و js) لتقديمها
+
 
 # تعيين limiter في app.state
 app.state.limiter = limiter
@@ -145,6 +160,19 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     password_confirmation: str
+
+@app.get("/")
+def home():
+    return FileResponse("index.html")
+
+@app.get("/login")
+def paj():
+    return FileResponse("login.html")
+
+
+@app.get("/register")
+def paj():
+    return FileResponse("register.html")
 
 # نقطة اختبار
 @app.get("/ok")

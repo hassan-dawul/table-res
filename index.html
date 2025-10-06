@@ -8,7 +8,7 @@
     <title>احجز طاولتك</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="static/style.css">
 </head>
 
 <body>
@@ -17,7 +17,7 @@
     <header class="p-3 text-bg-dark">
         <div class="container">
             <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start"> <a
-                    href="index.html" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                    href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
                     طاولتك
                 </a>
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
@@ -30,8 +30,8 @@
                 <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3" role="search"> <input type="search"
                         class="form-control form-control-dark text-bg-dark" placeholder="Search..." aria-label="Search">
                 </form>
-                <div class="text-end"> <a href="login.html" class="btn btn-outline-light me-2">تسجيل الدخول</a>
-                         <a href="register.html" class="btn btn-warning me-2"> اشتراك</a>
+                <div class="text-end"> <a href="login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
+                         <a href="register" class="btn btn-warning me-2"> اشتراك</a>
                     
                 </div>
             </div>
@@ -52,13 +52,14 @@
                     </button>
                 </div>
             </div>
-            <div class="col-lg-4 offset-lg-1 p-0 overflow-hidden shadow-lg"> <img class="rounded-lg-3"
-                    src="bootstrap-docs.png" alt="" width="720"> </div>
+            <div class="col-lg-4">
+                 <img class="rounded-lg-3 img-fluid" src="/static/hero.svg" alt="Hero" width="auto">
+            </div>
         </div>
     </div>
 
     <!-- ABOUT SECTION -->
-    <section class="brand-bg">
+    <section class="brand-bg">  
         <div class="container px-4 py-5 ">
             <h2 class="pb-2 border-bottom">من نحن؟</h2>
             <div class="row row-cols-1 row-cols-md-2 align-items-md-center g-5 py-5">
@@ -117,10 +118,11 @@
                 </div>
             </div>
         </div>
+     
     </section>
-
-
+ 
     <!-- HOW IT WORKS -->
+
     <div class="container px-4 py-5 " id="hanging-icons">
         <h2 class="pb-2 border-bottom text-center">كيف تعمل الخدمة؟</h2>
         <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
@@ -156,36 +158,90 @@
             </div>
         </div>
     </div>
+<section class="brand-bg py-5" id="restaurants-section">
+  <div class="container">
+    <h2 class="mb-4 text-center">المطاعم المتاحة</h2>
+    <div id="restaurants-container" class="row g-4">
+      <!-- بطاقات المطاعم -->
+    </div>
+  </div>
+</section>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+  $(document).ready(function() {
+    const endpoint = 'http://127.0.0.1:5000/restaurants'; // رابط API المحلي
+
+    $.ajax({
+      url: endpoint,
+      method: 'GET',
+      dataType: 'json',
+      success: function(data) {
+        $('#restaurants-container').empty();
+
+        $.each(data.data, function(index, r) {
+            console.log(r)
+          const cardHtml = `
+            <div class="col-md-4">
+              <div class="card shadow-sm rounded">
+                <div class="card-header bg-primary text-white">
+                  <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+                  <small>${r.cuisine}</small>
+                </div>
+                <div class="card-body">
+                  <p class="mb-1"><strong>الموقع:</strong> ${r.area}</p>
+                  <p class="mb-1"><strong>ساعات العمل:</strong> ${r.opens_at} - ${r.closes_at}</p>
+                  <p><strong>السعة:</strong> مقاعد ${r.capacity} ضيف</p>
+                </div>
+                <div class="card-footer text-center">
+                  <button class="btn btn-warning fw-bold">احجز الآن</button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          $('#restaurants-container').append(cardHtml);
+        });
+      },
+      error: function(xhr, status, error) {
+  $('#restaurants-container').html(`
+    <div class="alert alert-danger text-center">
+      <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
+      <p><strong>الحالة:</strong> ${status}</p>
+      <p><strong>الرسالة:</strong> ${error}</p>
+      <p><strong>تفاصيل:</strong> ${xhr.responseText}</p>
+    </div>
+  `);
+}
+
+
+    });
+  });
+</script>
 
     <!-- TAGS / CATEGORIES -->
+<section class="cta-section text-center py-5 bg-light">
+  <div class="container">
+    <h2 class="mb-4">تعرّف على خياراتك</h2>
+    <div class="chips">
+      <button class="btn btn-primary" type="submit">الرياض</button>
+      <input class="btn btn-primary" type="button" value="جدة" />
+      <input class="btn btn-primary" type="button" value="الدمام" />
+      <input class="btn btn-primary" type="submit" value="إيطالي" />
+      <input class="btn btn-primary" type="submit" value="هندي" />
+      <input class="btn btn-primary" type="reset" value="شرقي" />
+    </div>
+  </div>
+</section>
 
-   
-
-    <section class="tags brand-bg py-5 ncc">
-        <h2 class="ph-2 text-center">تعرّف على خياراتك</h2>
-        <div class="chips">
-
-
-
-            <button class="btn btn-primary" type="submit">الرياض</button>
-            <input class="btn btn-primary" type="button" value="جدة" />
-            <input class="btn btn-primary" type="button" value="عفيف" />
-            <input class="btn btn-primary" type="submit" value="إيطالي" />
-            <input class="btn btn-primary" type="submit" value="هندي" />
-            <input class="btn btn-primary" type="reset" value="شرقي" />
-        </div>
-    </section>
-
-
-
-
+    
     <!-- CTA SECTION -->
-    <section class="cta-section text-center py-5 bg-light">
-        <div class="container">
-            <h2 class="mb-4">جاهز لاكتشاف مطعمك القادم؟</h2>
-            <a href="#contact" class="btn btn-primary btn-lg">تواصل معنا</a>
-        </div>
-    </section>
+<section class="cta-section text-center py-5 brand-bg">
+  <div class="container">
+    <h2 class="mb-4">جاهز لاكتشاف مطعمك القادم؟</h2>
+    <a href="#contact" class="btn btn-primary btn-lg">تواصل معنا</a>
+  </div>
+</section>
 
     <!-- FOOTER -->
     <div class="container">
@@ -195,7 +251,7 @@
                 <li class="nav-item"><a href="#" class="nav-link px-2 text-body-secondary">الشروط</a></li>
                  <li class="nav-item"><a href="#" class="nav-link px-2 text-body-secondary">ايميل التواصل</a></li>
             </ul>
-            <p class="text-center text-body-secondary">© 2025 Company, Inc</p>
+            <p class="text-center text-body-secondary">حقوق الطبع والنشر  لعام ©2025</p>
         </footer>
     </div>
 

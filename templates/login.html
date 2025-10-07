@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block content %}
+<main class="form-signin w-100 m-auto mt-5" style="max-width: 400px;">
+    <form>
+        <h1 class="h3 mb-3 fw-normal text-center">تسجيل الدخول</h1>
+
+        <div class="mb-3">
+            <label for="email" class="form-label">البريد الإلكتروني</label>
+            <input type="email" class="form-control" id="email" placeholder="name@gmail.com" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="password" class="form-label">كلمة المرور</label>
+            <input type="password" class="form-control" id="password" required>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2" type="submit">تسجيل الدخول</button>
+
+        <p class="mt-3 text-center">ليس لديك حساب؟ <a href="/register">إنشاء حساب جديد</a></p>
+    </form>
+</main>
+{% endblock %}

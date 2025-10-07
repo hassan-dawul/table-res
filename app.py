@@ -22,6 +22,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 
 # تحميل المتغيرات من ملف .env
@@ -43,6 +47,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")  
 # ربط ملفات static (مثل css و js) لتقديمها
 
+templates = Jinja2Templates(directory="templates")
 
 # تعيين limiter في app.state
 app.state.limiter = limiter
@@ -161,18 +166,17 @@ class UserRegister(BaseModel):
     password: str
     password_confirmation: str
 
-@app.get("/")
-def home():
-    return FileResponse("index.html")
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/login")
-def paj():
-    return FileResponse("login.html")
+@app.get("/login", response_class=HTMLResponse)
+async def login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
-
-@app.get("/register")
-def paj():
-    return FileResponse("register.html")
+@app.get("/register", response_class=HTMLResponse)
+async def register(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
 
 # نقطة اختبار
 @app.get("/ok")

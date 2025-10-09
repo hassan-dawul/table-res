@@ -3,19 +3,22 @@
 
 {% block content %}
 <main class="form-signin w-100 m-auto mt-5" style="max-width: 400px;">
-    <form>
+    <form id="registerForm">
         <h1 class="h3 mb-3 fw-normal text-center">إنشاء حساب جديد</h1>
 
+        <!-- حقل الاسم الكامل -->
         <div class="mb-3">
             <label for="fullname" class="form-label">اسم المستخدم</label>
             <input type="text" class="form-control" id="fullname" required>
         </div>
 
+        <!-- حقل البريد الإلكتروني -->
         <div class="mb-3">
             <label for="email" class="form-label">البريد الإلكتروني</label>
             <input type="email" class="form-control" id="email" placeholder="name@gmail.com" required>
         </div>
 
+        <!-- حقل كلمة المرور -->
         <div class="mb-3">
             <label for="password" class="form-label">كلمة المرور</label>
             <input type="password" class="form-control" id="password" required>
@@ -24,12 +27,50 @@
             </div>
         </div>
 
+        <!-- تأكيد كلمة المرور -->
         <div class="mb-3">
             <label for="confirm" class="form-label">تأكيد كلمة المرور</label>
             <input type="password" class="form-control" id="confirm" required>
         </div>
 
+        <!-- زر التسجيل -->
         <button class="btn btn-primary w-100 py-2" type="submit">تسجيل</button>
+
+        <!-- رسالة الأخطاء -->
+        <div id="errorMsg" class="text-danger mt-2"></div>
+
+        <p class="mt-3 text-center">لديك حساب؟ <a href="/login">تسجيل الدخول</a></p>
     </form>
 </main>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault(); // منع إعادة تحميل الصفحة
+
+    const fullname = document.getElementById('fullname').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const password_confirmation = document.getElementById('confirm').value;
+
+    try {
+        const response = await fetch('/register', { // رابط API للتسجيل
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullname, email, password, password_confirmation })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // التسجيل ناجح → ننتقل مباشرة لصفحة تسجيل الدخول
+            window.location.href = '/login';
+        } else {
+            // عرض رسالة الخطأ القادمة من API
+            document.getElementById('errorMsg').textContent = data.message || 'حدث خطأ ما';
+        }
+    } catch (err) {
+        document.getElementById('errorMsg').textContent = 'خطأ في الاتصال بالخادم';
+    }
+});
+</script>
 {% endblock %}

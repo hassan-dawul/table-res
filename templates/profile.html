@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}الملف الشخصي{% endblock %}
+{% block content %}
+<main class="container mt-5">
+    <h2>مرحبا بك، <span id="fullname"></span></h2>
+    <p>البريد الإلكتروني: <span id="email"></span></p>
+    <p>آخر تسجيل دخول: <span id="last_login"></span></p>
+    <button id="logoutBtn" class="btn btn-danger">تسجيل الخروج</button>
+</main>
+
+<script>
+async function loadUserInfo() {
+    try {
+        const res = await fetch('/user');
+        const data = await res.json();
+        if(data.status === 'success'){
+            document.getElementById('fullname').textContent = data.data.fullname;
+            document.getElementById('email').textContent = data.data.email;
+            document.getElementById('last_login').textContent = data.data.last_login;
+        } else {
+            window.location.href = '/login';
+        }
+    } catch(err) {
+        console.error(err);
+        window.location.href = '/login';
+    }
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/logout');
+    window.location.href = '/login';
+});
+
+loadUserInfo();
+</script>
+{% endblock %}

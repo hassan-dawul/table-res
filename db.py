@@ -6,7 +6,7 @@ import os
 # تحميل متغيرات البيئة من ملف .env
 load_dotenv()
 
-# قراءة المتغيرات
+# قراءة متغيرات قاعدة البيانات من البيئة
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS", "")  # كلمة السر، افتراضي فاضية
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -16,15 +16,19 @@ DB_NAME = os.getenv("DB_NAME")
 # تكوين رابط الاتصال بقاعدة بيانات MySQL
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# إنشاء الاتصال
+# إنشاء محرك الاتصال بقاعدة البيانات
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"charset": "utf8mb4"},
-    echo=True
+    connect_args={"charset": "utf8mb4"},  # لضمان دعم الأحرف العربية والرموز
+    echo=True  # لتفعيل طباعة الاستعلامات على الكونسول (debug)
 )
 
-# تعريف Base لإنشاء الجداول
+# تعريف Base لإنشاء الجداول من خلال SQLAlchemy ORM
 Base = declarative_base()
 
-# إنشاء الجلسة
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# إنشاء جلسة للتعامل مع قاعدة البيانات
+SessionLocal = sessionmaker(
+    autocommit=False,  # منع الحفظ التلقائي، تحتاج commit صريح
+    autoflush=False,   # منع ال flush التلقائي قبل الاستعلامات
+    bind=engine
+)

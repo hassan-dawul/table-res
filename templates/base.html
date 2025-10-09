@@ -16,15 +16,24 @@
                     <li><a href="#" class="nav-link px-2 text-white">كيف نعمل</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">تواصل</a></li>
                 </ul>
+
+                <!-- ✅ أزرار تتغير حسب حالة تسجيل الدخول -->
                 <div class="text-end">
-                    <a href="/login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
-                    <a href="/register" class="btn btn-warning me-2">اشتراك</a>
+                    {% if request.session.get('user') %}
+                        <!-- المستخدم مسجل دخول -->
+                        <a href="/profile" class="btn btn-outline-light me-2">الملف الشخصي</a>
+                        <a href="/logout" class="btn btn-danger me-2">تسجيل الخروج</a>
+                    {% else %}
+                        <!-- المستخدم غير مسجل دخول -->
+                        <a href="/login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
+                        <a href="/register" class="btn btn-warning me-2">اشتراك</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- هنا نحط المحتوى بدون container حتى الخلفيات تاخذ العرض كامل -->
+    <!-- المحتوى الرئيسي -->
     {% block content %}{% endblock %}
 
     <!-- FOOTER -->

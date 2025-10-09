@@ -26,6 +26,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+
+
+
 
 
 # تحميل المتغيرات من ملف .env
@@ -36,6 +46,28 @@ limiter = Limiter(key_func=get_remote_address)
 
 # إنشاء التطبيق
 app = FastAPI()
+
+# إنشاء التطبيق
+app = FastAPI()
+# مفتاح سري لتشفير بيانات الجلسة (غيره لمفتاح قوي)
+SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
+
+app.add_middleware(SessionMiddleware, secret_key="YOUR_SECRET_KEY")  # ضع مفتاح سري قوي هنا
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # allow all methods
+    allow_headers=["*"],  # allow all headers
+)
+
+
+# مفتاح سري لتشفير بيانات الجلسة (غيره لمفتاح قوي)
+SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
+
+app.add_middleware(SessionMiddleware, secret_key="YOUR_SECRET_KEY")  # ضع مفتاح سري قوي هنا
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # allow all origins
@@ -171,12 +203,24 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/login", response_class=HTMLResponse)
-async def login(request: Request):
+def login_form(request: Request):
+    # 🔒 إذا المستخدم مسجل دخول، نحوله للملف الشخصي
+    if request.session.get("user"):
+        return RedirectResponse(url="/profile", status_code=303)
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/register", response_class=HTMLResponse)
-async def register(request: Request):
+def register_form(request: Request):
+    # 🔒 إذا المستخدم مسجل دخول، نحوله للملف الشخصي
+    if request.session.get("user"):
+        return RedirectResponse(url="/profile", status_code=303)
     return templates.TemplateResponse("register.html", {"request": request})
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page(request: Request):
+    if 'user' not in request.session:
+        return RedirectResponse("/login")
+    return templates.TemplateResponse("profile.html", {"request": request})
 
 # نقطة اختبار
 @app.get("/ok")
@@ -378,6 +422,10 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
         user.last_login = datetime.utcnow()
         db.commit()
         db.refresh(user)
+        
+        # بعد التأكد من bcrypt.checkpw
+        request.session['user'] = user.token  # تخزين التوكن في الجلسة
+
         return JSONResponse(status_code=200, content={
             "status": "ok",
             "message": "تم تسجيل الدخول بنجاح",
@@ -385,7 +433,7 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
             "token": token,
             "last_login": user.last_login.isoformat()
         })
-    return JSONResponse(status_code=401, content={"status": "error", "message": "بيانات الدخول غير صحيحة"})
+    return JSONResponse(status_code=400, content={"status": "error", "message": "بيانات الدخول غير صحيحة"})
 
 
 # عرض ملف المستخدم حسب التوكن (Authorization Bearer Token)
@@ -418,6 +466,30 @@ async def get_profile(
         }
 
     raise HTTPException(status_code=401, detail="توكن غير صالح أو منتهي.")
+
+@app.get("/user")
+def get_user(request: Request, db: Session = Depends(get_db)):
+    token = request.session.get('user')
+    if not token:
+        return {"status": "error", "message": "المستخدم غير مسجل"}
+    
+    user = db.query(User).filter(User.token == token).first()
+    if not user:
+        return {"status": "error", "message": "توكن غير صالح"}
+
+    return {
+        "status": "success",
+        "data": {
+            "fullname": user.fullname,
+            "email": user.email,
+            "last_login": user.last_login.isoformat() if user.last_login else None
+        }
+    }
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()  # 🧹 مسح الجلسة بالكامل
+    return RedirectResponse(url="/login", status_code=303)
 
 
 # دالة مساعدة لجلب المستخدم الحالي من التوكن

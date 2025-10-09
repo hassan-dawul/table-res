@@ -3,22 +3,57 @@
 
 {% block content %}
 <main class="form-signin w-100 m-auto mt-5" style="max-width: 400px;">
-    <form>
+    <form id="loginForm">
         <h1 class="h3 mb-3 fw-normal text-center">تسجيل الدخول</h1>
 
+        <!-- حقل البريد الإلكتروني -->
         <div class="mb-3">
             <label for="email" class="form-label">البريد الإلكتروني</label>
             <input type="email" class="form-control" id="email" placeholder="name@gmail.com" required>
         </div>
 
+        <!-- حقل كلمة المرور -->
         <div class="mb-3">
             <label for="password" class="form-label">كلمة المرور</label>
             <input type="password" class="form-control" id="password" required>
         </div>
 
+        <!-- زر تسجيل الدخول -->
         <button class="btn btn-primary w-100 py-2" type="submit">تسجيل الدخول</button>
+
+        <!-- رسالة للأخطاء -->
+        <div id="errorMsg" class="text-danger mt-2"></div>
 
         <p class="mt-3 text-center">ليس لديك حساب؟ <a href="/register">إنشاء حساب جديد</a></p>
     </form>
 </main>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault(); // منع إعادة تحميل الصفحة
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/login', { // رابط الـ API في backend
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // تسجيل الدخول ناجح → ننتقل إلى صفحة البروفايل
+            window.location.href = '/profile';
+        } else {
+            // عرض رسالة الخطأ من الـ API
+            document.getElementById('errorMsg').textContent = data.message || 'حدث خطأ ما';
+        }
+    } catch (err) {
+        document.getElementById('errorMsg').textContent = 'خطأ في الاتصال بالخادم';
+    }
+});
+</script>
 {% endblock %}

@@ -27,6 +27,8 @@ from pydantic import BaseModel, validator, EmailStr, conint
 from db import SessionLocal, engine, Base
 from models import User, Restaurant, Booking, BookingStatus
 from fastapi import Request, Depends
+from emails import send_welcome_email, send_booking_confirmation
+
 
 
 
@@ -383,6 +385,11 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    send_welcome_email(new_user.fullname, new_user.email)
+
+
+
+
     return JSONResponse(status_code=201, content={
         "status": "ok",
         "fullname": new_user.fullname,
@@ -624,6 +631,17 @@ async def create_booking(
     db.add(new_booking)
     db.commit()
     db.refresh(new_booking)
+
+    # 🔔 إرسال إيميل تأكيد الحجز
+    send_booking_confirmation(
+    user_name=user.fullname,
+    user_email=user.email,
+    booking_id=new_booking.id,
+    date=new_booking.date.strftime("%Y-%m-%d"),
+    time=new_booking.time.strftime("%H:%M"),
+    service_name=new_booking.restaurant.name  # اسم المطعم
+    )
+
 
     # إعادة رد JSON كامل ليتم عرضه في frontend
     return {

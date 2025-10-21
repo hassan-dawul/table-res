@@ -1,36 +1,157 @@
 {% extends "base.html" %}
-{% block title %}الملف الشخصي{% endblock %}
+{% block title %}حجز طاولة{% endblock %}
 {% block content %}
+
 <main class="container mt-5">
     <h2>مرحبا بك، <span id="fullname"></span></h2>
     <p>البريد الإلكتروني: <span id="email"></span></p>
     <p>آخر تسجيل دخول: <span id="last_login"></span></p>
-    <button id="logoutBtn" class="btn btn-danger">تسجيل الخروج</button>
+    <button id="logoutBtn" class="btn btn-danger mb-4">تسجيل الخروج</button>
+
+    <hr>
+
+    <h3>حجوزاتي القادمة:</h3>
+    <table class="table table-striped" id="bookingsTable">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">المطعم</th>
+                <th scope="col">التاريخ</th>
+                <th scope="col">الوقت</th>
+                <th scope="col">عدد الأشخاص</th>
+                <th scope="col">الحالة</th>
+                <th scope="col">إجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="bookingsList">
+            <!-- سيتم ملء هذا القسم بالحجوزات عبر JavaScript -->
+        </tbody>
+    </table>
 </main>
 
 <script>
-async function loadUserInfo() {
-    try {
-        const res = await fetch('/user');
-        const data = await res.json();
-        if(data.status === 'success'){
-            document.getElementById('fullname').textContent = data.data.fullname;
-            document.getElementById('email').textContent = data.data.email;
-            document.getElementById('last_login').textContent = data.data.last_login;
-        } else {
+    // ==========================
+    // دالة جلب بيانات المستخدم
+    // ==========================
+    async function loadUserInfo() {
+        try {
+            const res = await fetch('/user', { credentials: 'include' });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                document.getElementById('fullname').textContent = data.data.fullname;
+                document.getElementById('email').textContent = data.data.email;
+                document.getElementById('last_login').textContent = data.data.last_login;
+
+                loadUserBookings();
+            } else {
+                window.location.href = '/login';
+            }
+        } catch (err) {
+            console.error("خطأ في تحميل بيانات المستخدم:", err);
             window.location.href = '/login';
         }
-    } catch(err) {
-        console.error(err);
-        window.location.href = '/login';
+    }
+
+    // ==========================
+    // دالة جلب وعرض حجوزات المستخدم
+    // ==========================
+
+    async function loadUserBookings() {
+    const list = document.getElementById('bookingsList');
+    list.innerHTML = '';
+
+    // 🔹 1️⃣ إضافة قاموس ترجمة الحالة
+    const statusTranslation = {
+        "confirmed": "مؤكد",
+        "cancelled": "ملغي"
+    };
+
+    try {
+        const res = await fetch('/api/bookings', { credentials: 'include' });
+        const result = await res.json();
+        const bookings = result.data;
+
+        if (bookings.length > 0) {
+            bookings.forEach((b, index) => {
+                let dateOnly = b.date.split('T')[0]; // التاريخ بدون الوقت
+
+                // 🔹 3️⃣ منع ظهور زر الإلغاء للحجوزات الملغية
+                let actionBtn = '';
+                if (b.status !== 'cancelled') {
+                    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">
+                                    إلغاء
+                                 </button>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <th scope="row">${index + 1}</th>
+                    <td>${b.restaurant_name}</td>
+                    <td>${dateOnly}</td>
+                    <td>${b.time}</td>
+                    <td>${b.people}</td>
+                    <!-- 🔹 عرض الحالة بالعربي -->
+                    <td>${statusTranslation[b.status] || b.status}</td>
+                    <td>${actionBtn}</td>
+                `;
+                list.appendChild(tr);
+            });
+        } else {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="7" class="text-center">لا توجد حجوزات حالياً.</td>`;
+            list.appendChild(tr);
+        }
+    } catch (err) {
+        console.error("خطأ في تحميل الحجوزات:", err);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" class="text-center text-danger">حدث خطأ في تحميل الحجوزات.</td>`;
+        list.appendChild(tr);
     }
 }
 
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await fetch('/logout');
-    window.location.href = '/login';
-});
 
-loadUserInfo();
+    // ==========================
+    // 🧹 دالة إلغاء الحجز
+    // ==========================
+    async function cancelBooking(id, btn) {
+        if (!confirm('هل أنت متأكد من الإلغاء؟')) return;
+
+        try {
+            const res = await fetch(`/api/bookings/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                //  تعديل: لا نحذف الصف، نغير الحالة فقط ونزيل زر الإلغاء
+                const row = btn.closest('tr');
+                row.querySelector('td:nth-child(6)').textContent = "ملغي"; // العمود 6 هو حالة الحجز
+                btn.remove(); // إزالة زر الإلغاء بعد الإلغاء
+                alert(`✅ تم الإلغاء بنجاح`);
+            } else {
+                alert(`⚠️ ${data.detail || 'حدث خطأ أثناء الإلغاء'}`);
+            }
+        } catch (error) {
+            alert(`⚠️ فشل الاتصال بالخادم`);
+            console.error(error);
+        }
+    }
+
+    // ==========================
+    // دالة تسجيل الخروج
+    // ==========================
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+            await fetch('/logout', { credentials: 'include' });
+            window.location.href = '/login';
+        } catch (err) {
+            console.error("خطأ أثناء تسجيل الخروج:", err);
+        }
+    });
+
+    loadUserInfo();
 </script>
+
 {% endblock %}

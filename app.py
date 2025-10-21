@@ -1,38 +1,32 @@
 import os
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request, Header, Depends, Body
-from fastapi.responses import JSONResponse
-from typing import Optional, List
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
-from datetime import datetime
-import bcrypt
 import secrets
-import jwt
-
-from pydantic import BaseModel, validator, EmailStr
-from db import SessionLocal, engine, Base
-from models import User, Restaurant, Booking, BookingStatus
+from datetime import datetime, date as date_type, time as time_type
 from enum import Enum
-from pydantic import conint
-from datetime import date as date_type, time as time_type
+from typing import Optional, List
+
+import bcrypt
+import jwt
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request, Query, Header, Depends, Body
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
+from sqlalchemy.orm import Session, joinedload
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from fastapi import Request
-from fastapi.responses import RedirectResponse
+
+from pydantic import BaseModel, validator, EmailStr, conint
+
+from db import SessionLocal, engine, Base
+from models import User, Restaurant, Booking, BookingStatus
+from fastapi import Request, Depends
 
 
 
@@ -44,8 +38,6 @@ load_dotenv()
 # إنشاء Limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# إنشاء التطبيق
-app = FastAPI()
 
 # إنشاء التطبيق
 app = FastAPI()
@@ -54,27 +46,15 @@ SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
 
 app.add_middleware(SessionMiddleware, secret_key="YOUR_SECRET_KEY")  # ضع مفتاح سري قوي هنا
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],  # allow all methods
     allow_headers=["*"],  # allow all headers
 )
 
-
-# مفتاح سري لتشفير بيانات الجلسة (غيره لمفتاح قوي)
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
-
-app.add_middleware(SessionMiddleware, secret_key="YOUR_SECRET_KEY")  # ضع مفتاح سري قوي هنا
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # allow all methods
-    allow_headers=["*"],  # allow all headers
-)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")  
 # ربط ملفات static (مثل css و js) لتقديمها
@@ -83,6 +63,13 @@ templates = Jinja2Templates(directory="templates")
 
 # تعيين limiter في app.state
 app.state.limiter = limiter
+
+@app.get("/booking/{restaurant_id}", response_class=HTMLResponse)
+def booking_page(request: Request, restaurant_id: int):
+    return templates.TemplateResponse(
+        "booking.html",
+        {"request": request, "restaurant_id": restaurant_id}
+    )
 
 
 # إضافة middleware الخاص بـ slowapi
@@ -137,10 +124,10 @@ def create_access_token(data: dict, expires_delta: Optional[int] = None):  # NEW
     return encoded_jwt
 # دالة التحقق من صلاحية الأدمن
 def admin_required(
-    authorization: Optional[str] = Header(None),
+    request: Request,
     db: Session = Depends(get_db)
-) -> User:
-    user = get_current_user(authorization, db)
+    ) -> User:
+    user = get_current_user_from_session(request, db) 
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول إلى هذا المورد.")
     return user
@@ -493,15 +480,16 @@ async def logout(request: Request):
 
 
 # دالة مساعدة لجلب المستخدم الحالي من التوكن
-def get_current_user(authorization: Optional[str], db: Session):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="الرمز غير موجود.")
+def get_current_user_from_session(request: Request, db: Session):
+    # أخذ التوكن من الجلسة
+    token: Optional[str] = request.session.get('user')
+    print('my token', token)
+    exit
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="الرمز غير موجود في الجلسة.")
 
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="صيغة التوكن غير صحيحة.")
-
-    token = parts[1]
+    # البحث عن المستخدم بالتوكن في قاعدة البيانات
     user = db.query(User).filter(User.token == token).first()
     if not user:
         raise HTTPException(status_code=401, detail="توكن غير صالح أو غير موجود.")
@@ -523,21 +511,33 @@ class BookingCreate(BaseModel):
 
     @validator('date')
     def validate_date(cls, v):
+        
+
+        if v is None:
+            return v
+
+        # ✅ تحقق من الصيغة
         try:
             d = datetime.strptime(v, "%Y-%m-%d").date()
-            if d < datetime.utcnow().date():
-                raise ValueError("لا يمكن الحجز في تاريخ ماضٍ.")  # NEW: منع الحجز في الماضي
-            return v
-        except:
-            raise ValueError("صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="صيغة التاريخ يجب أن تكون YYYY-MM-DD.")
+        
+        # ✅ تحقق من أن التاريخ ليس ماضيًا
+        if d < datetime.utcnow().date():
+            raise HTTPException(status_code=400, detail="لا يمكن الحجز في تاريخ ماضٍ.")
+      
+        return v
 
     @validator('time')
     def validate_time(cls, v):
+        if v is None:
+            return v
         try:
             datetime.strptime(v, "%H:%M").time()
             return v
-        except:
+        except ValueError:
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
+
 
 # موديل لتحديث الحجز (جزئي)
 class BookingUpdate(BaseModel):
@@ -567,31 +567,40 @@ class BookingUpdate(BaseModel):
         except:
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
 
+
 # إنشاء حجز جديد
 @app.post("/bookings", status_code=201)
 async def create_booking(
     booking: BookingCreate,
-    authorization: Optional[str] = Header(None),
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    user = get_current_user(authorization, db)  # NEW: التأكد من توكن المستخدم لجلب بياناته
+ 
+    print(request.session)
+    # الحصول على المستخدم الحالي من الجلسة
+    user = get_current_user_from_session(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول للحجز.")
 
+    # التحقق من وجود المطعم
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
 
+    # تحويل التاريخ والوقت إلى كائنات datetime
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
     booking_time = datetime.strptime(booking.time, "%H:%M").time()
 
-    # NEW: منع الحجز في وقت ماضي في نفس اليوم
-    if booking_date == datetime.utcnow().date() and booking_time <= datetime.utcnow().time():
-        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ.")
+    
+    # منع الحجز في وقت ماضي لنفس اليوم
+    if booking.date == datetime.now().date() and booking.time <= datetime.now().time(): 
+        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ اليوم.") 
 
-    # NEW: التأكد من أن وقت الحجز داخل ساعات عمل المطعم
+    # التأكد من أن وقت الحجز داخل ساعات عمل المطعم
     if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:
         raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
 
-    # NEW: حساب إجمالي عدد الأشخاص في نفس الوقت للتأكد من السعة
+    # حساب إجمالي عدد الأشخاص في نفس الوقت للتأكد من السعة
     existing_bookings = db.query(Booking).filter(
         Booking.restaurant_id == restaurant.id,
         Booking.date == booking_date,
@@ -603,43 +612,67 @@ async def create_booking(
     if total_people > restaurant.capacity:
         raise HTTPException(status_code=400, detail="السعة غير كافية لهذا الوقت.")
 
+    # إنشاء الحجز وربطه بالمستخدم
     new_booking = Booking(
         restaurant_id=restaurant.id,
-        user_id=user.id,  # NEW: ربط الحجز بالمستخدم الحالي
+        user_id=user.id,
         date=booking_date,
         time=booking_time,
         people=booking.people,
-        status=BookingStatus.confirmed  # NEW: تعيين حالة الحجز مؤكدة بشكل افتراضي
+        status=BookingStatus.confirmed
     )
     db.add(new_booking)
     db.commit()
     db.refresh(new_booking)
 
-    return {"status": "success", "booking_id": new_booking.id}
-
-# استعراض كل حجوزات المستخدم
-@app.get("/bookings")
-def list_user_bookings(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم لجلب بياناته
-    bookings = db.query(Booking).filter(Booking.user_id == user.id).all()
+    # إعادة رد JSON كامل ليتم عرضه في frontend
     return {
         "status": "success",
-        "data": [{
+        "booking_id": new_booking.id,
+        "date": new_booking.date.strftime("%Y-%m-%d"),
+        "time": new_booking.time.strftime("%H:%M"),
+        "people": new_booking.people
+    }
+# استعراض كل حجوزات المستخدم
+@app.get("/api/bookings")
+def list_user_bookings(request: Request, db: Session = Depends(get_db)):
+    # الحصول على المستخدم الحالي من الجلسة
+    user = get_current_user_from_session(request, db)  # احرص على تمرير request الفعلي
+    if not user:
+        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول لرؤية الحجوزات.")
+
+    # جلب جميع حجوزات المستخدم من قاعدة البيانات
+
+    bookings = (
+        db.query(Booking)
+        .options(joinedload(Booking.restaurant))  # هذا يقوم بعمل JOIN تلقائي
+        .filter(Booking.user_id == user.id)
+        .order_by(Booking.date.desc()) 
+        .all()
+    )
+
+    # إعادة قائمة الحجوزات كـ JSON
+    return {
+        "status": "success",
+        "data": [
+            {
+
             "id": b.id,
-            "restaurant_id": b.restaurant_id,
+            "restaurant_name": b.restaurant.name if b.restaurant else "غير معروف",
             "date": b.date.isoformat(),
             "time": b.time.strftime("%H:%M"),
             "people": b.people,
-            "status": b.status.value,  # NEW: عرض حالة الحجز (confirmed أو cancelled)
+            "status": b.status,
             "created_at": b.created_at.isoformat(),
             "updated_at": b.updated_at.isoformat()
         } for b in bookings]
     }
 
+
 # استعراض حجز معين
 @app.get("/bookings/{booking_id}")
 def get_booking_by_id(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
+    user = get_current_user_from_session(Request, db)
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
@@ -665,7 +698,7 @@ def update_booking(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ):
-    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
+    user =get_current_user_from_session (authorization, db)  
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
@@ -709,13 +742,20 @@ def update_booking(
     return {"status": "success", "message": "تم تحديث الحجز بنجاح"}
 
 # إلغاء الحجز (تغيير الحالة)
-@app.delete("/bookings/{booking_id}")
-def cancel_booking(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    user = get_current_user(authorization, db)  # NEW: التحقق من توكن المستخدم
+@app.delete("/api/bookings/{booking_id}")
+def cancel_booking(booking_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_session(request, db)  
+    if not user:
+        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
+    
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
-    booking.status = BookingStatus.cancelled  # NEW: تغيير حالة الحجز إلى ملغي بدل الحذف
+    
+    # إذا الحقل status معرف كـ Enum:
+    booking.status = BookingStatus.cancelled
+    # إذا الحقل مجرد string، اكتب: booking.status = "ملغي"
+    
     db.commit()
     return {"status": "success", "message": "تم إلغاء الحجز بنجاح"}
 

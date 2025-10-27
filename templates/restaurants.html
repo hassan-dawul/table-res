@@ -1,0 +1,151 @@
+    {% extends "base.html" %}
+    {% block title %}المطاعم{% endblock %}
+    {% block content %}
+
+    <!-- RESTAURANTS SECTION -->
+    <section class="brand-bg py-5" id="restaurants-section" style="background-color: #007BFF;">
+        <div class="container">
+            <h2 class="mb-4 text-center text-white">المطاعم المتاحة</h2>
+            <div class="row">
+
+                <!-- ====== الفلاتر ====== -->
+                <div class="col-md-3">
+                    <div class="card p-3 shadow-sm mb-4">
+                        <h5>الفلاتر</h5>
+
+                        <!-- البحث -->
+                        <div class="mb-3 mt-2">
+                            <div class="input-group">
+                                <input type="text" id="restaurant-search" class="form-control form-control-sm"
+                                    placeholder="ابحث عن مطعم...">
+                                <button id="search-btn" class="btn btn-primary btn-sm">بحث</button>
+                            </div>
+                        </div>
+
+                        <!-- فلتر نوع المطبخ -->
+                        <div class="mb-3">
+                            <h6>نوع المطبخ</h6>
+                            <div id="cuisine-filters"></div>
+                        </div>
+
+                        <!-- فلتر المنطقة -->
+                        <div class="mb-3">
+                            <h6>المنطقة</h6>
+                            <div id="area-filters"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== قائمة المطاعم ====== -->
+                <div class="col-md-9">
+                    <div class="row" id="restaurant-list">
+                        <!-- البطاقات ستُضاف هنا -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <script>
+    const restaurantList = document.getElementById("restaurant-list");
+    const cuisineFiltersDiv = document.getElementById("cuisine-filters");
+    const areaFiltersDiv = document.getElementById("area-filters");
+    const searchInput = document.getElementById("restaurant-search");
+    const searchBtn = document.getElementById("search-btn");
+
+    // جلب وعرض المطاعم حسب الفلاتر وكلمة البحث
+    async function fetchRestaurants(searchQuery = "") {
+        let cuisine = document.querySelector("input[name='cuisine']:checked")?.value || "";
+        let area = document.querySelector("input[name='area']:checked")?.value || "";
+        let apiUrl = `/restaurants?limit=10`; // رفع الحد لعرض المزيد
+        if (cuisine) apiUrl += `&cuisine=${encodeURIComponent(cuisine)}`;
+        if (area) apiUrl += `&area=${encodeURIComponent(area)}`;
+        if (searchQuery) apiUrl += `&search=${encodeURIComponent(searchQuery)}`;
+
+        try {
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+
+            restaurantList.innerHTML = "";
+
+            (result.data || result).forEach(r => {
+                const cardHtml = `
+                    <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm rounded h-100">
+                        <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+                        <small>${r.cuisine}</small>
+                        </div>
+                        <div class="card-body">
+                        <p class="mb-1"><strong>الموقع:</strong> ${r.area}</p>
+                        <p class="mb-1"><strong>ساعات العمل:</strong> ${r.opens_at} - ${r.closes_at}</p>
+                        <p><strong>السعة:</strong> ${r.capacity} ضيف</p>
+                        </div>
+                        <div class="card-footer text-center">
+                        <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">احجز الآن</button>
+                        </div>
+                    </div>
+                    </div>`;
+                restaurantList.insertAdjacentHTML("beforeend", cardHtml);
+            });
+
+        } catch (error) {
+            console.error("خطأ في جلب البيانات:", error);
+            restaurantList.innerHTML = `<p>حدث خطأ في جلب بيانات المطاعم.</p>`;
+        }
+    }
+
+    // جلب الفلاتر من API
+    async function loadFilters() {
+        try {
+            const res = await fetch("/restaurants/filters");
+            const data = await res.json();
+
+            // فلتر نوع المطبخ
+            const allCuisine = document.createElement("div");
+            allCuisine.className = "form-check";
+            allCuisine.innerHTML = `<input class="form-check-input" type="radio" name="cuisine" value="" id="allCuisine" checked>
+                                    <label class="form-check-label w-100" for="allCuisine">الكل</label>`;
+            cuisineFiltersDiv.appendChild(allCuisine);
+            data.filters.cuisines.forEach(c => {
+                const div = document.createElement("div");
+                div.className = "form-check";
+                div.innerHTML = `<input class="form-check-input" type="radio" name="cuisine" value="${c}" id="${c}">
+                                <label class="form-check-label w-100" for="${c}">${c}</label>`;
+                cuisineFiltersDiv.appendChild(div);
+            });
+
+            // فلتر المنطقة
+            const allArea = document.createElement("div");
+            allArea.className = "form-check";
+            allArea.innerHTML = `<input class="form-check-input" type="radio" name="area" value="" id="allArea" checked>
+                                <label class="form-check-label w-100" for="allArea">الكل</label>`;
+            areaFiltersDiv.appendChild(allArea);
+            data.filters.areas.forEach(a => {
+                const div = document.createElement("div");
+                div.className = "form-check";
+                div.innerHTML = `<input class="form-check-input" type="radio" name="area" value="${a}" id="${a}">
+                                <label class="form-check-label w-100" for="${a}">${a}</label>`;
+                areaFiltersDiv.appendChild(div);
+            });
+
+            document.querySelectorAll("input[name='cuisine'], input[name='area']").forEach(radio => {
+                radio.addEventListener("change", () => fetchRestaurants(searchInput.value.trim()));
+            });
+
+        } catch (error) {
+            console.error("خطأ في جلب الفلاتر:", error);
+        }
+    }
+
+    // تفعيل البحث عند الضغط على زر (يرسل ريكوست)
+    searchBtn.addEventListener("click", () => {
+        fetchRestaurants(searchInput.value.trim());
+    });
+
+    // تحميل الفلاتر ثم المطاعم
+    loadFilters().then(() => fetchRestaurants());
+    </script>
+
+    {% endblock %}

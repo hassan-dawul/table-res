@@ -10,14 +10,19 @@
                 <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
                     طاولتك
                 </a>
+
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    {% if request.session.get('role') == "admin" %}
+                        <li><a href="/admin/bookings" class="nav-link px-2 text-white"> الحجوزات</a></li>
+                    {% endif %}
+
                     <li><a href="/" class="nav-link px-2 text-white">الرئيسية</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">عنّا</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">كيف نعمل</a></li>
                     <li><a href="#" class="nav-link px-2 text-white">تواصل</a></li>
                 </ul>
 
-                <!-- ✅ أزرار تتغير حسب حالة تسجيل الدخول -->
+                <!-- أزرار تتغير حسب حالة تسجيل الدخول -->
                 <div class="text-end">
                     {% if request.session.get('user') %}
                         <!-- المستخدم مسجل دخول -->

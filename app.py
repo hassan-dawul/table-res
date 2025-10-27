@@ -24,10 +24,10 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from pydantic import BaseModel, validator, EmailStr, conint
 
-from db import SessionLocal, engine, Base
+from db import SessionLocal, engine, Base, get_db
 from models import User, Restaurant, Booking, BookingStatus
 from fastapi import Request, Depends
-from emails import send_welcome_email, send_booking_confirmation
+from emails import send_welcome_email, send_booking_confirmation, send_booking_cancellation
 
 
 
@@ -72,6 +72,12 @@ def booking_page(request: Request, restaurant_id: int):
         "booking.html",
         {"request": request, "restaurant_id": restaurant_id}
     )
+
+@app.get("/admin/bookings", response_class=HTMLResponse)
+def admin_bookings_page(request: Request, db: Session = Depends(get_db)):
+    user = admin_required(request, db)  # تتحقق من صلاحية الأدمن
+    return templates.TemplateResponse("admin_bookings.html", {"request": request})
+
 
 
 # إضافة middleware الخاص بـ slowapi
@@ -188,8 +194,17 @@ class UserRegister(BaseModel):
     password_confirmation: str
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def index(request: Request, db: Session = Depends(get_db)):
+    try:
+        current_user = get_current_user_from_session(request, db)
+    except HTTPException:
+        current_user = None  # إذا ما فيه جلسة مسجل دخول، خلي current_user None
+
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "current_user": current_user}
+    )
+
 
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
@@ -221,6 +236,8 @@ async def ok():
 def get_restaurants(
     area: Optional[str] = Query(None),
     cuisine: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(3),  # عدد المطاعم التي ستُرجع، الافتراضي 3
     db: Session = Depends(get_db)
 ):
     query = db.query(Restaurant)
@@ -228,8 +245,15 @@ def get_restaurants(
         query = query.filter(Restaurant.area == area)
     if cuisine:
         query = query.filter(Restaurant.cuisine == cuisine)
+    if search:
+        query = query.filter(Restaurant.name.ilike(f"%{search}%"))  # تفعيل البحث
+    
 
-    restaurants = query.all()
+    # query = query.filter(Restaurant.name.ilike(f"%{search}%"))  # البحث على اسم المطعم
+
+
+    restaurants = query.limit(limit).all()  # فقط أول limit مطاعم
+
     return {
         "status": "success",
         "data": [
@@ -246,6 +270,36 @@ def get_restaurants(
             } for r in restaurants
         ]
     }
+
+
+# ====== المطاعم - جلب قائمة الفلاتر ======
+@app.get("/restaurants/filters")
+def get_restaurant_filters(db: Session = Depends(get_db)):
+    # جلب جميع أنواع المطابخ الموجودة في قاعدة البيانات بدون تكرار
+    cuisines = db.query(Restaurant.cuisine).distinct().all()
+    # جلب جميع المناطق الموجودة في قاعدة البيانات بدون تكرار
+    areas = db.query(Restaurant.area).distinct().all()
+
+    # flatten من tuples إلى قائمة بسيطة
+    cuisines = [c[0] for c in cuisines]
+    areas = [a[0] for a in areas]
+
+
+    # إعادة الفلاتر في شكل JSON
+    return {
+        "status": "success",
+        "filters": {
+            "cuisines": cuisines,
+            "areas": areas
+        }
+    }
+
+
+# ======= صفحة المطاعم (HTML) =======
+@app.get("/restaurants_page")
+def restaurants_page(request: Request):
+    return templates.TemplateResponse("restaurants.html", {"request": request})
+
 
 # المطاعم - قراءة مطعم واحد
 @app.get("/restaurants/{restaurant_id}")
@@ -419,6 +473,7 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
         
         # بعد التأكد من bcrypt.checkpw
         request.session['user'] = user.token  # تخزين التوكن في الجلسة
+        request.session['role'] = user.role
 
         return JSONResponse(status_code=200, content={
             "status": "ok",
@@ -486,12 +541,10 @@ async def logout(request: Request):
     return RedirectResponse(url="/login", status_code=303)
 
 
-# دالة مساعدة لجلب المستخدم الحالي من التوكن
 def get_current_user_from_session(request: Request, db: Session):
     # أخذ التوكن من الجلسة
     token: Optional[str] = request.session.get('user')
     print('my token', token)
-    exit
     
     if not token:
         raise HTTPException(status_code=401, detail="الرمز غير موجود في الجلسة.")
@@ -687,6 +740,33 @@ def list_user_bookings(request: Request, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/admin/bookings")
+def list_all_bookings_for_admin(db: Session = Depends(get_db), user: User = Depends(admin_required)):
+    bookings = (
+        db.query(Booking)
+        .options(joinedload(Booking.restaurant), joinedload(Booking.user))
+        .order_by(Booking.date.desc(), Booking.time.desc())  # ⚡ ترتيب من الأحدث للأقدم
+        .all()
+    )
+    return {
+        "status": "success",
+        "data": [
+            {
+                "id": b.id,
+                "user_name": b.user.fullname if b.user else "غير معروف",
+                "restaurant_name": b.restaurant.name if b.restaurant else "غير معروف",
+                "date": b.date.isoformat(),
+                "time": b.time.strftime("%H:%M"),
+                "people": b.people,
+                "status": b.status,
+                "created_at": b.created_at.isoformat(),
+                "updated_at": b.updated_at.isoformat(),
+            }
+            for b in bookings
+        ],
+    }
+
+
 # استعراض حجز معين
 @app.get("/bookings/{booking_id}")
 def get_booking_by_id(booking_id: int, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
@@ -762,21 +842,41 @@ def update_booking(
 # إلغاء الحجز (تغيير الحالة)
 @app.delete("/api/bookings/{booking_id}")
 def cancel_booking(booking_id: int, request: Request, db: Session = Depends(get_db)):
-    user = get_current_user_from_session(request, db)  
+    # جلب المستخدم من السيشن
+    user = get_current_user_from_session(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
     
+    # جلب الحجز
     booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == user.id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="الحجز غير موجود.")
     
-    # إذا الحقل status معرف كـ Enum:
+    # تغيير حالة الحجز إلى ملغي
     booking.status = BookingStatus.cancelled
-    # إذا الحقل مجرد string، اكتب: booking.status = "ملغي"
-    
     db.commit()
-    return {"status": "success", "message": "تم إلغاء الحجز بنجاح"}
 
+    # جلب بيانات المطعم المرتبط بالحجز
+    restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
+    service_name = restaurant.name if restaurant else "الخدمة"
+
+    # ✉️ إرسال إيميل إلغاء الحجز مع معالجة الأخطاء
+    try:
+        send_booking_cancellation(
+            user_name=user.fullname,   # لاحظ استخدام fullname بدل name
+            user_email=user.email,
+            booking_id=booking.id,
+            date=booking.date,
+            time=booking.time,
+            service_name=service_name
+        )
+    except Exception as e:
+        print(f"❌ فشل إرسال إيميل الإلغاء: {e}")
+
+    return {
+        "status": "success",
+        "message": "تم إلغاء الحجز بنجاح وتم إرسال إشعار عبر البريد الإلكتروني."
+    }
 
 
 

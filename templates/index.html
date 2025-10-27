@@ -14,10 +14,12 @@
         والمطبخ والميزانية.
       </p>
       <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4 mb-lg-3">
-        <button type="button" class="btn btn-primary btn-lg px-4 me-md-2 fw-bold">
-          استكشف المطاعم
-        </button>
-      </div>
+  <button type="button" class="btn btn-primary btn-lg px-4 me-md-2 fw-bold"
+          onclick="window.location.href='/restaurants_page'">
+    استكشف المطاعم
+  </button>
+</div>
+  
     </div>
     <div class="col-lg-4">
       <img class="rounded-lg-3 img-fluid" src="/static/hero.svg" alt="Hero" width="auto" />
@@ -73,21 +75,21 @@
       <div>
         <h3 class="fs-2 text-body-emphasis">استكشف</h3>
         <p>استكشف أفضل المطاعم حولك بكل سهولة، مع تفاصيل دقيقة تساعدك على اتخاذ القرار الصحيح.</p>
-        <a href="#" class="btn btn-primary">اكتشف مطعمك</a>
+        
       </div>
     </div>
     <div class="col d-flex align-items-start">
       <div>
         <h3 class="fs-2 text-body-emphasis">اختر</h3>
         <p>اختر المطعم الذي يناسب ذوقك واحتياجاتك من بين مئات الخيارات المصنفة والموثوقة.</p>
-        <a href="#" class="btn btn-primary">اختر مطعمك</a>
+        
       </div>
     </div>
     <div class="col d-flex align-items-start">
       <div>
         <h3 class="fs-2 text-body-emphasis">احجز عبر شريك</h3>
         <p>احجز طاولتك مباشرة عبر شريكنا بكل سرعة وأمان، واستمتع بتجربة خالية من التعقيد.</p>
-        <a href="#" class="btn btn-primary">احجز الأن</a>
+        
       </div>
     </div>
   </div>
@@ -98,6 +100,12 @@
   <div class="container">
     <h2 class="mb-4 text-center">المطاعم المتاحة</h2>
     <div id="restaurants-container" class="row g-4"></div>
+        <!-- زر المزيد -->
+    <div class="text-center mt-4">
+        <a href="/restaurants_page" class="btn btn-primary btn-lg">المزيد من المطاعم</a>
+    </div>
+</div>
+
   </div>
 </section>
 
@@ -168,5 +176,6 @@
     });
   });
 </script>
+
 
 {% endblock %}

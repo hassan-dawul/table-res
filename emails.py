@@ -4,15 +4,17 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-load_dotenv()  # يحمل القيم من .env
+load_dotenv()  # تحميل إعدادات البريد من .env
 
-# إعدادات البريد (SMTP) من ملف .env
+# إعدادات الخادم البريدي
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 FROM_EMAIL = os.getenv("FROM_EMAIL")
 
+
+# دالة الإرسال العامة
 def send_email(to_email, subject, body):
     msg = MIMEMultipart()
     msg['From'] = FROM_EMAIL
@@ -30,7 +32,8 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Failed to send email to {to_email}: {e}")
 
-# إرسال إيميل ترحيبي للمستخدم الجديد
+
+# ✉️ إيميل ترحيبي
 def send_welcome_email(user_name, user_email):
     subject = "مرحباً بك في موقعنا!"
     body = f"""مرحباً {user_name}،
@@ -43,7 +46,8 @@ def send_welcome_email(user_name, user_email):
 """
     send_email(user_email, subject, body)
 
-# إرسال إيميل تأكيد الحجز
+
+# 📅 إيميل تأكيد الحجز
 def send_booking_confirmation(user_name, user_email, booking_id, date, time, service_name):
     subject = "تأكيد حجزك"
     body = f"""مرحباً {user_name}،
@@ -56,6 +60,26 @@ def send_booking_confirmation(user_name, user_email, booking_id, date, time, ser
 الخدمة: {service_name}
 
 نحن نتطلع لاستقبالك!
+
+مع تحيات فريقنا
+"""
+    send_email(user_email, subject, body)
+
+
+# ❌ إيميل إلغاء الحجز الجديد
+# إرسال إيميل إلغاء الحجز
+def send_booking_cancellation(user_name, user_email, booking_id, date, time, service_name):
+    subject = "تم إلغاء حجزك"
+    body = f"""مرحباً {user_name}،
+
+تم إلغاء حجزك بنجاح. تفاصيل الحجز كانت كالتالي:
+
+رقم الحجز: {booking_id}
+التاريخ: {date}
+الوقت: {time}
+الخدمة: {service_name}
+
+نأسف لأي إزعاج، ونتمنى أن نراك قريباً!
 
 مع تحيات فريقنا
 """

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 {% include 'head.html' %}
+
 <body>
 
     <!-- HEADER -->
@@ -13,7 +14,7 @@
 
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                     {% if request.session.get('role') == "admin" %}
-                        <li><a href="/admin/bookings" class="nav-link px-2 text-white"> الحجوزات</a></li>
+                    <li><a href="/admin/bookings" class="nav-link px-2 text-white"> الحجوزات</a></li>
                     {% endif %}
 
                     <li><a href="/" class="nav-link px-2 text-white">الرئيسية</a></li>
@@ -25,14 +26,14 @@
                 <!-- أزرار تتغير حسب حالة تسجيل الدخول -->
                 <div class="text-end">
                     {% if request.session.get('user') %}
-                        <!-- المستخدم مسجل دخول -->
-                        <a href="/profile" class="btn btn-outline-light me-2">الملف الشخصي</a>
-                        <a href="/logout" class="btn btn-danger me-2">تسجيل الخروج</a>
+                    <a href="/profile" class="btn btn-outline-light me-2">الملف الشخصي</a>
+                    <a href="/logout" class="btn btn-danger me-2">تسجيل الخروج</a>
                     {% else %}
-                        <!-- المستخدم غير مسجل دخول -->
-                        <a href="/login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
-                        <a href="/register" class="btn btn-warning me-2">اشتراك</a>
+                    <a href="/login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
+                    <a href="/register" class="btn btn-warning me-2">اشتراك</a>
                     {% endif %}
+
+                    <button class="btn btn-light btn-sm" id="lang-ar">العربية</button>
                 </div>
             </div>
         </div>
@@ -45,6 +46,7 @@
     <footer class="text-center py-4 text-body-secondary bg-light mt-5">
         حقوق الطبع والنشر © 2025 - طاولتك
     </footer>
+
 
 </body>
 </html>

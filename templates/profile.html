@@ -1,70 +1,87 @@
 {% extends "base.html" %}
-{% block title %}حجز طاولة{% endblock %}
+{% block title %}<span id="profile-title">حجز طاولة</span>{% endblock %}
 {% block content %}
 
 <main class="container mt-5">
-    <h2>مرحبا بك، <span id="fullname"></span></h2>
-    <p>البريد الإلكتروني: <span id="email"></span></p>
-    <p>آخر تسجيل دخول: <span id="last_login"></span></p>
-    <button id="logoutBtn" class="btn btn-danger mb-4">تسجيل الخروج</button>
+    <h2><span id="profile-welcome">مرحبا بك،</span> <span id="fullname"></span></h2>
+    <p><span id="profile-email">البريد الإلكتروني:</span> <span id="email"></span></p>
+    <p><span id="profile-last-login">آخر تسجيل دخول:</span> <span id="last_login"></span></p>
+    <button id="logoutBtn" class="btn btn-danger mb-4"><span id="profile-logout">تسجيل الخروج</span></button>
 
     <hr>
 
-    <h3>حجوزاتي القادمة:</h3>
+    <h3 id="bookings-title">حجوزاتي القادمة:</h3>
     <table class="table table-striped" id="bookingsTable">
         <thead>
             <tr>
-                <th scope="col">#</th>
-                <th scope="col">المطعم</th>
-                <th scope="col">التاريخ</th>
-                <th scope="col">الوقت</th>
-                <th scope="col">عدد الأشخاص</th>
-                <th scope="col">الحالة</th>
-                <th scope="col">إجراءات</th>
+                <th id="table-id" scope="col">#</th>
+                <th id="table-restaurant" scope="col">المطعم</th>
+                <th id="table-date" scope="col">التاريخ</th>
+                <th id="table-time" scope="col">الوقت</th>
+                <th id="table-people" scope="col">عدد الأشخاص</th>
+                <th id="table-status" scope="col">الحالة</th>
+                <th id="table-actions" scope="col">إجراءات</th>
             </tr>
         </thead>
         <tbody id="bookingsList">
             <!-- سيتم ملء هذا القسم بالحجوزات عبر JavaScript -->
         </tbody>
     </table>
+
+<!-- 🔹 عناصر الترجمة المخفية -->
+<p class="d-none" id="profile-welcome"></p>
+<p class="d-none" id="profile-email"></p>
+<p class="d-none" id="profile-last-login"></p>
+<p class="d-none" id="profile-logout"></p>
+<p class="d-none" id="bookings-title"></p>
+<p class="d-none" id="table-id"></p>
+<p class="d-none" id="table-restaurant"></p>
+<p class="d-none" id="table-date"></p>
+<p class="d-none" id="table-time"></p>
+<p class="d-none" id="table-people"></p>
+<p class="d-none" id="table-status"></p>
+<p class="d-none" id="table-actions"></p>
+<p class="d-none" id="status-confirmed"></p>
+<p class="d-none" id="status-cancelled"></p>
+<p class="d-none" id="no-bookings"></p>
+<p class="d-none" id="error-loading-bookings"></p>
+<p class="d-none" id="cancel-confirm"></p>
+<p class="d-none" id="cancel-success"></p>
+<p class="d-none" id="cancel-failed"></p>
+<p class="d-none" id="logout-error"></p>
+<p class="d-none" id="cancel-btn"></p>
+
+    
 </main>
 
 <script>
-    // ==========================
-    // دالة جلب بيانات المستخدم
-    // ==========================
-    async function loadUserInfo() {
-        try {
-            const res = await fetch('/user', { credentials: 'include' });
-            const data = await res.json();
+async function loadUserInfo() {
+    try {
+        const res = await fetch('/user', { credentials: 'include' });
+        const data = await res.json();
 
-            if (data.status === 'success') {
-                document.getElementById('fullname').textContent = data.data.fullname;
-                document.getElementById('email').textContent = data.data.email;
-                document.getElementById('last_login').textContent = data.data.last_login;
+        if (data.status === 'success') {
+            document.getElementById('fullname').textContent = data.data.fullname;
+            document.getElementById('email').textContent = data.data.email;
+            document.getElementById('last_login').textContent = data.data.last_login;
 
-                loadUserBookings();
-            } else {
-                window.location.href = '/login';
-            }
-        } catch (err) {
-            console.error("خطأ في تحميل بيانات المستخدم:", err);
+            loadUserBookings();
+        } else {
             window.location.href = '/login';
         }
+    } catch (err) {
+        console.error("خطأ في تحميل بيانات المستخدم:", err);
+        window.location.href = '/login';
     }
+}
 
-    // ==========================
-    // دالة جلب وعرض حجوزات المستخدم
-    // ==========================
-
-    async function loadUserBookings() {
+async function loadUserBookings() {
     const list = document.getElementById('bookingsList');
     list.innerHTML = '';
 
-    // 🔹 1️⃣ إضافة قاموس ترجمة الحالة
     const statusTranslation = {
-        "confirmed": "مؤكد",
-        "cancelled": "ملغي"
+        "confirmed": document.getElementById('status-confirmed')?.textContent || "مؤكد",
+        "cancelled": document.getElementById('status-cancelled')?.textContent || "ملغي"
     };
 
     try {
@@ -74,14 +91,10 @@
 
         if (bookings.length > 0) {
             bookings.forEach((b, index) => {
-                let dateOnly = b.date.split('T')[0]; // التاريخ بدون الوقت
-
-                // 🔹 3️⃣ منع ظهور زر الإلغاء للحجوزات الملغية
+                let dateOnly = b.date.split('T')[0];
                 let actionBtn = '';
                 if (b.status !== 'cancelled') {
-                    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">
-                                    إلغاء
-                                 </button>`;
+                    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">${document.getElementById('cancel-btn')?.textContent || 'إلغاء'}</button>`;
                 }
 
                 const tr = document.createElement('tr');
@@ -91,7 +104,6 @@
                     <td>${dateOnly}</td>
                     <td>${b.time}</td>
                     <td>${b.people}</td>
-                    <!-- 🔹 عرض الحالة بالعربي -->
                     <td>${statusTranslation[b.status] || b.status}</td>
                     <td>${actionBtn}</td>
                 `;
@@ -99,59 +111,51 @@
             });
         } else {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="7" class="text-center">لا توجد حجوزات حالياً.</td>`;
+            tr.innerHTML = `<td colspan="7" class="text-center">${document.getElementById('no-bookings')?.textContent || 'لا توجد حجوزات حالياً.'}</td>`;
             list.appendChild(tr);
         }
     } catch (err) {
         console.error("خطأ في تحميل الحجوزات:", err);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="7" class="text-center text-danger">حدث خطأ في تحميل الحجوزات.</td>`;
+        tr.innerHTML = `<td colspan="7" class="text-center text-danger">${document.getElementById('error-loading-bookings')?.textContent || 'حدث خطأ في تحميل الحجوزات.'}</td>`;
         list.appendChild(tr);
     }
 }
 
+async function cancelBooking(id, btn) {
+    if (!confirm(document.getElementById('cancel-confirm')?.textContent || 'هل أنت متأكد من الإلغاء؟')) return;
 
-    // ==========================
-    // 🧹 دالة إلغاء الحجز
-    // ==========================
-    async function cancelBooking(id, btn) {
-        if (!confirm('هل أنت متأكد من الإلغاء؟')) return;
+    try {
+        const res = await fetch(`/api/bookings/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
 
-        try {
-            const res = await fetch(`/api/bookings/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            const data = await res.json();
-
-            if (data.status === 'success') {
-                //  تعديل: لا نحذف الصف، نغير الحالة فقط ونزيل زر الإلغاء
-                const row = btn.closest('tr');
-                row.querySelector('td:nth-child(6)').textContent = "ملغي"; // العمود 6 هو حالة الحجز
-                btn.remove(); // إزالة زر الإلغاء بعد الإلغاء
-                alert(`✅ تم الإلغاء بنجاح`);
-            } else {
-                alert(`⚠️ ${data.detail || 'حدث خطأ أثناء الإلغاء'}`);
-            }
-        } catch (error) {
-            alert(`⚠️ فشل الاتصال بالخادم`);
-            console.error(error);
+        if (data.status === 'success') {
+            const row = btn.closest('tr');
+            row.querySelector('td:nth-child(6)').textContent = document.getElementById('status-cancelled')?.textContent || "ملغي";
+            btn.remove();
+            alert(document.getElementById('cancel-success')?.textContent || "✅ تم الإلغاء بنجاح");
+        } else {
+            alert(`⚠️ ${data.detail || document.getElementById('cancel-failed')?.textContent || 'حدث خطأ أثناء الإلغاء'}`);
         }
+    } catch (error) {
+        alert(document.getElementById('logout-error')?.textContent || "⚠️ فشل الاتصال بالخادم");
+        console.error(error);
     }
+}
 
-    // ==========================
-    // دالة تسجيل الخروج
-    // ==========================
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-        try {
-            await fetch('/logout', { credentials: 'include' });
-            window.location.href = '/login';
-        } catch (err) {
-            console.error("خطأ أثناء تسجيل الخروج:", err);
-        }
-    });
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+        await fetch('/logout', { credentials: 'include' });
+        window.location.href = '/login';
+    } catch (err) {
+        console.error(document.getElementById('logout-error')?.textContent || "خطأ أثناء تسجيل الخروج:", err);
+    }
+});
 
-    loadUserInfo();
+loadUserInfo();
 </script>
 
 {% endblock %}

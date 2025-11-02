@@ -6,20 +6,17 @@
 <div class="container my-5">
   <div class="row p-4 pb-0 pe-lg-0 pt-lg-5 align-items-center rounded-3 border shadow-lg">
     <div class="col-lg-7 p-3 p-lg-5 pt-lg-3">
-      <h1 class="display-4 fw-bold lh-1 text-body-emphasis">
-        احجز طاولتك بسهولة — دليل موحّد لمطاعم مدينتك
+      <h1 id="hero-title" class="display-4 fw-bold lh-1 text-body-emphasis">
       </h1>
-      <p class="lead">
-        منصّة تعريفية تجمع أفضل المطاعم وتبسّط طريقك للحجز عبر شركائنا. استكشف حسب المدينة
-        والمطبخ والميزانية.
+      <p id="hero-desc" class="lead">
+        منصّة تعريفية تجمع أفضل المطاعم وتبسّط طريقك للحجز عبر شركائنا. استكشف حسب المدينة والمطبخ والميزانية.
       </p>
       <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4 mb-lg-3">
-  <button type="button" class="btn btn-primary btn-lg px-4 me-md-2 fw-bold"
-          onclick="window.location.href='/restaurants_page'">
-    استكشف المطاعم
-  </button>
-</div>
-  
+        <button id="explore-btn" type="button" class="btn btn-primary btn-lg px-4 me-md-2 fw-bold"
+                onclick="window.location.href='/restaurants_page'">
+          استكشف المطاعم
+        </button>
+      </div>
     </div>
     <div class="col-lg-4">
       <img class="rounded-lg-3 img-fluid" src="/static/hero.svg" alt="Hero" width="auto" />
@@ -30,34 +27,34 @@
 <!-- ABOUT SECTION -->
 <section class="brand-bg">
   <div class="container px-4 py-5">
-    <h2 class="pb-2 border-bottom">من نحن؟</h2>
+    <h2 id="about-section-title" class="pb-2 border-bottom text-body-emphasis">من نحن؟</h2>
     <div class="row row-cols-1 row-cols-md-2 align-items-md-center g-5 py-5">
       <div class="col d-flex flex-column align-items-start gap-2">
-        <h2 class="fw-bold text-body-emphasis">نحن منصة تهدف لتسهيل عملية اكتشاف وحجز المطاعم</h2>
-        <p class="text-body-secondary">
-          نوفر لك تجربة سلسة لاستكشاف المطاعم المناسبة لك، مع إمكانية الحجز الفوري. سواء كنت تبحث عن مطعم فاخر أو مكان هادئ لعشاء عائلي، نحن نوفر لك الخيارات المناسبة.
+        <h2 id="about-title" class="fw-bold text-body-emphasis">نحن منصة تهدف لتسهيل عملية اكتشاف وحجز المطاعم</h2>
+        <p id="about-desc" class="text-body-secondary">
+          نوفر لك تجربة سلسة لاستكشاف المطاعم المناسبة لك، مع إمكانية الحجز الفوري.
         </p>
-        <a href="#" class="btn btn-primary btn-lg">احجز الآن</a>
+        <a id="book-now-btn" href="#" class="btn btn-primary btn-lg">احجز الآن</a>
       </div>
       <div class="col">
         <div class="row row-cols-1 row-cols-sm-2 g-4">
           <div class="col d-flex flex-column gap-2">
-            <h4 class="fw-semibold mb-0 text-body-emphasis">واجهة سهلة</h4>
-            <p class="text-body-secondary">
+            <h4 id="feature1-title" class="fw-semibold mb-0 text-body-emphasis">واجهة سهلة</h4>
+            <p id="feature1-desc" class="text-body-secondary">
               صممنا منصتنا بواجهة استخدام بسيطة وسهلة، لتمنحك تجربة مريحة وسريعة.
             </p>
           </div>
 
           <div class="col d-flex flex-column gap-2">
-            <h4 class="fw-semibold mb-0 text-body-emphasis">معلومات دقيقة</h4>
-            <p class="text-body-secondary">
+            <h4 id="feature2-title" class="fw-semibold mb-0 text-body-emphasis">معلومات دقيقة</h4>
+            <p id="feature2-desc" class="text-body-secondary">
               نوفر لك معلومات دقيقة ومحدثة عن كل مطعم، تشمل قائمة الطعام، الأسعار، ساعات العمل، والموقع.
             </p>
           </div>
 
           <div class="col d-flex flex-column gap-2">
-            <h4 class="fw-semibold mb-0 text-body-emphasis">شراكات</h4>
-            <p class="text-body-secondary">
+            <h4 id="feature3-title" class="fw-semibold mb-0 text-body-emphasis">شراكات</h4>
+            <p id="feature3-desc" class="text-body-secondary">
               شراكاتنا مع أكثر من 2000 مطعم تتيح لنا عرض معلومات دقيقة وتأكيد الحجوزات بشكل فوري.
             </p>
           </div>
@@ -69,27 +66,24 @@
 
 <!-- HOW IT WORKS -->
 <div class="container px-4 py-5" id="hanging-icons">
-  <h2 class="pb-2 border-bottom text-center">كيف تعمل الخدمة؟</h2>
+  <h2 id="how-it-works-title" class="pb-2 border-bottom text-center">كيف تعمل الخدمة؟</h2>
   <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
     <div class="col d-flex align-items-start">
       <div>
-        <h3 class="fs-2 text-body-emphasis">استكشف</h3>
-        <p>استكشف أفضل المطاعم حولك بكل سهولة، مع تفاصيل دقيقة تساعدك على اتخاذ القرار الصحيح.</p>
-        
+        <h3 id="step1-title" class="fs-2 text-body-emphasis">استكشف</h3>
+        <p id="step1-desc">استكشف أفضل المطاعم حولك بكل سهولة، مع تفاصيل دقيقة تساعدك على اتخاذ القرار الصحيح.</p>
       </div>
     </div>
     <div class="col d-flex align-items-start">
       <div>
-        <h3 class="fs-2 text-body-emphasis">اختر</h3>
-        <p>اختر المطعم الذي يناسب ذوقك واحتياجاتك من بين مئات الخيارات المصنفة والموثوقة.</p>
-        
+        <h3 id="step2-title" class="fs-2 text-body-emphasis">اختر</h3>
+        <p id="step2-desc">اختر المطعم الذي يناسب ذوقك واحتياجاتك من بين مئات الخيارات المصنفة والموثوقة.</p>
       </div>
     </div>
     <div class="col d-flex align-items-start">
       <div>
-        <h3 class="fs-2 text-body-emphasis">احجز عبر شريك</h3>
-        <p>احجز طاولتك مباشرة عبر شريكنا بكل سرعة وأمان، واستمتع بتجربة خالية من التعقيد.</p>
-        
+        <h3 id="step3-title" class="fs-2 text-body-emphasis">احجز عبر شريك</h3>
+        <p id="step3-desc">احجز طاولتك مباشرة عبر شريكنا بكل سرعة وأمان، واستمتع بتجربة خالية من التعقيد.</p>
       </div>
     </div>
   </div>
@@ -98,28 +92,25 @@
 <!-- RESTAURANTS SECTION -->
 <section class="brand-bg py-5" id="restaurants-section">
   <div class="container">
-    <h2 class="mb-4 text-center">المطاعم المتاحة</h2>
+    <h2 id="restaurants-title" class="mb-4 text-center">المطاعم المتاحة</h2>
     <div id="restaurants-container" class="row g-4"></div>
-        <!-- زر المزيد -->
     <div class="text-center mt-4">
-        <a href="/restaurants_page" class="btn btn-primary btn-lg">المزيد من المطاعم</a>
+        <a id="more-restaurants-btn" href="/restaurants_page" class="btn btn-primary btn-lg">المزيد من المطاعم</a>
     </div>
-</div>
-
   </div>
 </section>
 
 <!-- TAGS / CATEGORIES -->
 <section class="cta-section text-center py-5 bg-light">
   <div class="container">
-    <h2 class="mb-4">تعرّف على خياراتك</h2>
+      <h2 id="tags-title" class="mb-4">تعرّف على خياراتك</h2>
     <div class="chips">
-      <button class="btn btn-primary">الرياض</button>
-      <button class="btn btn-primary">جدة</button>
-      <button class="btn btn-primary">الدمام</button>
-      <button class="btn btn-primary">إيطالي</button>
-      <button class="btn btn-primary">هندي</button>
-      <button class="btn btn-primary">شرقي</button>
+      <button class="btn btn-primary" id="tag-riyadh">الرياض</button>
+      <button class="btn btn-primary" id="tag-jeddah">جدة</button>
+      <button class="btn btn-primary" id="tag-dammam">الدمام</button>
+      <button class="btn btn-primary" id="tag-italian">إيطالي</button>
+      <button class="btn btn-primary" id="tag-indian">هندي</button>
+      <button class="btn btn-primary" id="tag-arabic">شرقي</button>
     </div>
   </div>
 </section>
@@ -127,55 +118,56 @@
 <!-- CTA SECTION -->
 <section class="cta-section text-center py-5 brand-bg">
   <div class="container">
-    <h2 class="mb-4">جاهز لاكتشاف مطعمك القادم؟</h2>
-    <a href="#contact" class="btn btn-primary btn-lg">تواصل معنا</a>
+    <h2 id="cta-title" class="mb-4">جاهز لاكتشاف مطعمك القادم؟</h2>
+    <a id="contact-btn" href="#contact" class="btn btn-primary btn-lg">تواصل معنا</a>
   </div>
 </section>
 
 <!-- JavaScript -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script>
-  $(document).ready(function() {
-    const endpoint = 'http://127.0.0.1:5000/restaurants';
-    $.ajax({
-      url: endpoint,
-      method: 'GET',
-      dataType: 'json',
-      success: function(data) {
-        $('#restaurants-container').empty();
-        $.each(data.data, function(index, r) {
-          const cardHtml = `
-            <div class="col-md-4">
-              <div class="card shadow-sm rounded">
-                <div class="card-header bg-primary text-white">
-                  <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
-                  <small>${r.cuisine}</small>
-                </div>
-                <div class="card-body">
-                  <p class="mb-1"><strong>الموقع:</strong> ${r.area}</p>
-                  <p class="mb-1"><strong>ساعات العمل:</strong> ${r.opens_at} - ${r.closes_at}</p>
-                  <p><strong>السعة:</strong> ${r.capacity} ضيف</p>
-                </div>
-                <div class="card-footer text-center">
-                  <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">احجز الآن</button>
-                </div>
-              </div>
-            </div>`;
-          $('#restaurants-container').append(cardHtml);
-        });
-      },
-      error: function(xhr, status, error) {
-        $('#restaurants-container').html(`
-          <div class="alert alert-danger text-center">
-            <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
-            <p><strong>الحالة:</strong> ${status}</p>
-            <p><strong>الرسالة:</strong> ${error}</p>
-          </div>
-        `);
-      }
-    });
-  });
-</script>
 
+<script>
+$(document).ready(function() {
+  const endpoint = '/restaurants';
+  $.ajax({
+    url: endpoint,
+    method: 'GET',
+    dataType: 'json',
+    success: function(data) {
+      $('#restaurants-container').empty();
+      $.each(data.data, function(index, r) {
+        const cardHtml = `
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+              <small>${r.cuisine}</small>
+            </div>
+            <div class="card-body">
+              <p class="mb-1"><strong>الموقع:</strong> ${r.area}</p>
+              <p class="mb-1"><strong>ساعات العمل:</strong> ${r.opens_at} - ${r.closes_at}</p>
+              <p><strong>السعة:</strong> ${r.capacity} ضيف</p>
+            </div>
+            <div class="card-footer text-center">
+              <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">احجز الآن</button>
+            </div>
+          </div>
+        </div>`;
+        $('#restaurants-container').append(cardHtml);
+      });
+    },
+    error: function(xhr, status, error) {
+      $('#restaurants-container').html(`
+        <div class="alert alert-danger text-center">
+          <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
+          <p><strong>الحالة:</strong> ${status}</p>
+          <p><strong>الرسالة:</strong> ${error}</p>
+        </div>
+      `);
+    }
+  });
+
+});
+</script>
 
 {% endblock %}

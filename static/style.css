@@ -7,7 +7,8 @@
 
             background-color: #fdfdfd;
             color: #222;
-            direction: rtl;
+            direction: var(--page-dir, rtl);
+
           
             /* text-align: center; */
         }

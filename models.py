@@ -18,6 +18,7 @@ class User(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     role = Column(String(50), default="user", nullable=False)
+    
 
     # علاقة الحجوزات: كل مستخدم يمكن أن يكون له عدة حجوزات
     bookings = relationship("Booking", back_populates="user")
@@ -29,8 +30,11 @@ class Restaurant(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
+    name_en = Column(String(100), nullable=True)       # جديد
     area = Column(String(100), nullable=False)
+    area_en = Column(String(100), nullable=True)       # جديد
     cuisine = Column(String(100), nullable=False)
+    cuisine_en = Column(String(100), nullable=True)    # جديد
     opens_at = Column(Time, nullable=False)
     closes_at = Column(Time, nullable=False)
     capacity = Column(Integer, nullable=False)

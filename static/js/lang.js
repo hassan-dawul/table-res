@@ -59,6 +59,36 @@ $(document).ready(function() {
       "cancel-failed": "⚠️ حدث خطأ أثناء الإلغاء",
       "logout-error": "⚠️ خطأ أثناء تسجيل الخروج",
       "cancel-btn": "إلغاء",
+          // HEADER
+    "nav-bookings": "الحجوزات",
+    "nav-home": "الرئيسية",
+    "nav-about": "عنّا",
+    "nav-how": "كيف نعمل",
+    "nav-contact": "تواصل",
+    "btn-profile": "الملف الشخصي",
+    "btn-logout": "تسجيل الخروج",
+    "btn-login": "تسجيل الدخول",
+    "btn-register": "اشتراك",
+        //مطاعم 
+      "location": "الموقع",
+      "hours": "ساعات العمل",
+      "capacity": "السعة",
+      "bookNow": "احجز الآن",
+      
+      "filters": "الفلاتر",
+      "searchPlaceholder": "ابحث عن مطعم...",
+      "search-btn": "بحث",
+      "cuisine-filters": "نوع المطبخ",
+      "area": "المنطقة",
+      "all": "الكل",
+      "workingHours": "ساعات العمل",
+      "capacity": "السعة",
+      "bookNow": "احجز الآن",
+      "guests": "ضيف",
+      "errorFetch": "حدث خطأ في جلب بيانات المطاعم.",
+
+
+
 
     },
 
@@ -119,6 +149,37 @@ $(document).ready(function() {
       "cancel-failed": "⚠️ Error occurred while cancelling",
       "logout-error": "⚠️ Error during logout",
       "cancel-btn": "cancellation",
+          // HEADER
+    "nav-bookings": "Bookings",
+    "nav-home": "Home",
+    "nav-about": "About",
+    "nav-how": "How It Works",
+    "nav-contact": "Contact",
+    "btn-profile": "Profile",
+    "btn-logout": "Logout",
+    "btn-login": "Login",
+    "btn-register": "Register",
+       //مطاعم
+      "location": "Location",
+      "hours": "Working Hours",
+      "capacity": "Capacity",
+      "bookNow": "Book Now",
+
+      "filters": "Filters",
+      "searchPlaceholder": "Search for a restaurant...",
+      "search-btn": "Search",
+      "cuisineType": "Cuisine Type",
+      "area": "Area",
+      "all": "All",
+      
+      "workingHours": "Working Hours",
+      "capacity": "Capacity",
+      "bookNow": "Book Now",
+      "guests": "Guests",
+      "errorFetch": "Error fetching restaurant data."
+
+
+
     }
   };
 
@@ -153,7 +214,7 @@ const langToggle = document.getElementById('lang-ar'); // استخدم الزر 
 langToggle.onclick = () => {
     const currentLang = localStorage.getItem('site-lang') || 'ar';
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
-    changeLanguage(newLang); // تحديث النصوص والاتجاه
+    localStorage.setItem('site-lang', newLang);
     // تحديث نص الزر نفسه
 
     location.reload()
@@ -162,6 +223,6 @@ langToggle.onclick = () => {
 
     const lang = localStorage.getItem('site-lang') || 'ar'; // استرجاع اللغة أو العربية افتراضي
     changeLanguage(lang); // تطبيق النصوص
-  
+
 
 });

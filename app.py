@@ -237,31 +237,29 @@ def get_restaurants(
     area: Optional[str] = Query(None),
     cuisine: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    limit: int = Query(3),  # عدد المطاعم التي ستُرجع، الافتراضي 3
+    lang: str = Query("ar"),  # اللغة الافتراضية عربي
+    limit: int = Query(3),
     db: Session = Depends(get_db)
 ):
     query = db.query(Restaurant)
+
     if area:
-        query = query.filter(Restaurant.area == area)
+        query = query.filter(Restaurant.area == area if lang=="ar" else Restaurant.area_en == area)
     if cuisine:
-        query = query.filter(Restaurant.cuisine == cuisine)
+        query = query.filter(Restaurant.cuisine == cuisine if lang=="ar" else Restaurant.cuisine_en == cuisine)
     if search:
-        query = query.filter(Restaurant.name.ilike(f"%{search}%"))  # تفعيل البحث
-    
+        query = query.filter(Restaurant.name.ilike(f"%{search}%") if lang=="ar" else Restaurant.name_en.ilike(f"%{search}%"))
 
-    # query = query.filter(Restaurant.name.ilike(f"%{search}%"))  # البحث على اسم المطعم
-
-
-    restaurants = query.limit(limit).all()  # فقط أول limit مطاعم
+    restaurants = query.limit(limit).all()
 
     return {
         "status": "success",
         "data": [
             {
                 "id": r.id,
-                "name": r.name,
-                "area": r.area,
-                "cuisine": r.cuisine,
+                "name": r.name if lang=="ar" else r.name_en or r.name,
+                "area": r.area if lang=="ar" else r.area_en or r.area,
+                "cuisine": r.cuisine if lang=="ar" else r.cuisine_en or r.cuisine,
                 "opens_at": r.opens_at.strftime("%H:%M"),
                 "closes_at": r.closes_at.strftime("%H:%M"),
                 "capacity": r.capacity,
@@ -274,18 +272,18 @@ def get_restaurants(
 
 # ====== المطاعم - جلب قائمة الفلاتر ======
 @app.get("/restaurants/filters")
-def get_restaurant_filters(db: Session = Depends(get_db)):
-    # جلب جميع أنواع المطابخ الموجودة في قاعدة البيانات بدون تكرار
-    cuisines = db.query(Restaurant.cuisine).distinct().all()
-    # جلب جميع المناطق الموجودة في قاعدة البيانات بدون تكرار
-    areas = db.query(Restaurant.area).distinct().all()
+def get_restaurant_filters(lang: str = "ar", db: Session = Depends(get_db)):
+    if lang == "en":
+        cuisines = db.query(Restaurant.cuisine_en).distinct().all()
+        areas = db.query(Restaurant.area_en).distinct().all()
+    else:
+        cuisines = db.query(Restaurant.cuisine).distinct().all()
+        areas = db.query(Restaurant.area).distinct().all()
 
     # flatten من tuples إلى قائمة بسيطة
-    cuisines = [c[0] for c in cuisines]
-    areas = [a[0] for a in areas]
+    cuisines = [c[0] for c in cuisines if c[0]]
+    areas = [a[0] for a in areas if a[0]]
 
-
-    # إعادة الفلاتر في شكل JSON
     return {
         "status": "success",
         "filters": {
@@ -473,7 +471,6 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
         
         # بعد التأكد من bcrypt.checkpw
         request.session['user'] = user.token  # تخزين التوكن في الجلسة
-        request.session['role'] = user.role
 
         return JSONResponse(status_code=200, content={
             "status": "ok",
@@ -740,14 +737,18 @@ def list_user_bookings(request: Request, db: Session = Depends(get_db)):
     }
 
 
+# عرض جميع الحجوزات - خاص بالأدمن فقط
 @app.get("/api/admin/bookings")
 def list_all_bookings_for_admin(db: Session = Depends(get_db), user: User = Depends(admin_required)):
+    # فقط الأدمن يمكنه الوصول
     bookings = (
         db.query(Booking)
         .options(joinedload(Booking.restaurant), joinedload(Booking.user))
-        .order_by(Booking.date.desc(), Booking.time.desc())  # ⚡ ترتيب من الأحدث للأقدم
+        .order_by(Booking.date.desc())
         .all()
     )
+
+    # إعادة كل الحجوزات
     return {
         "status": "success",
         "data": [

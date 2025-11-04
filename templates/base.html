@@ -17,22 +17,23 @@
                     <li><a href="/admin/bookings" class="nav-link px-2 text-white"> الحجوزات</a></li>
                     {% endif %}
 
-                    <li><a href="/" class="nav-link px-2 text-white">الرئيسية</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">عنّا</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">كيف نعمل</a></li>
-                    <li><a href="#" class="nav-link px-2 text-white">تواصل</a></li>
+                    <li><a href="/" class="nav-link px-2 text-white" id="nav-home">الرئيسية</a></li>
+                    <li><a href="#" class="nav-link px-2 text-white" id="nav-about">عنّا</a></li>
+                    <li><a href="#" class="nav-link px-2 text-white" id="nav-how">كيف نعمل</a></li>
+                    <li><a href="#" class="nav-link px-2 text-white" id="nav-contact">تواصل</a></li>
                 </ul>
 
                 <!-- أزرار تتغير حسب حالة تسجيل الدخول -->
                 <div class="text-end">
                     {% if request.session.get('user') %}
-                    <a href="/profile" class="btn btn-outline-light me-2">الملف الشخصي</a>
-                    <a href="/logout" class="btn btn-danger me-2">تسجيل الخروج</a>
+                    <a href="/profile" class="btn btn-outline-light me-2" id="btn-profile">الملف الشخصي</a>
+                    <a href="/logout" class="btn btn-danger me-2" id="btn-logout">تسجيل الخروج</a>
                     {% else %}
-                    <a href="/login" class="btn btn-outline-light me-2">تسجيل الدخول</a>
-                    <a href="/register" class="btn btn-warning me-2">اشتراك</a>
+                    <a href="/login" class="btn btn-outline-light me-2" id="btn-login">تسجيل الدخول</a>
+                    <a href="/register" class="btn btn-warning me-2" id="btn-register">اشتراك</a>
                     {% endif %}
 
+                    
                     <button class="btn btn-light btn-sm" id="lang-ar">العربية</button>
                 </div>
             </div>
@@ -43,10 +44,19 @@
     {% block content %}{% endblock %}
 
     <!-- FOOTER -->
-    <footer class="text-center py-4 text-body-secondary bg-light mt-5">
+    <footer class="text-center py-4 text-body-secondary bg-light mt-5" id="footer-text">
         حقوق الطبع والنشر © 2025 - طاولتك
     </footer>
 
+    <!-- 🔹 عناصر الترجمة المخفية -->
+    <p class="d-none" id="status-confirmed"></p>
+    <p class="d-none" id="status-cancelled"></p>
+    <p class="d-none" id="no-bookings"></p>
+    <p class="d-none" id="error-loading-bookings"></p>
+    <p class="d-none" id="cancel-confirm"></p>
+    <p class="d-none" id="cancel-success"></p>
+    <p class="d-none" id="cancel-failed"></p>
+    <p class="d-none" id="logout-error"></p>
 
 </body>
 </html>

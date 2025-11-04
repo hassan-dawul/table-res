@@ -127,47 +127,59 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script>
-$(document).ready(function() {
-  const endpoint = '/restaurants';
-  $.ajax({
-    url: endpoint,
-    method: 'GET',
-    dataType: 'json',
-    success: function(data) {
-      $('#restaurants-container').empty();
-      $.each(data.data, function(index, r) {
-        const cardHtml = `
-        <div class="col-md-4">
-          <div class="card shadow-sm rounded">
-            <div class="card-header bg-primary text-white">
-              <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
-              <small>${r.cuisine}</small>
-            </div>
-            <div class="card-body">
-              <p class="mb-1"><strong>الموقع:</strong> ${r.area}</p>
-              <p class="mb-1"><strong>ساعات العمل:</strong> ${r.opens_at} - ${r.closes_at}</p>
-              <p><strong>السعة:</strong> ${r.capacity} ضيف</p>
-            </div>
-            <div class="card-footer text-center">
-              <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">احجز الآن</button>
-            </div>
-          </div>
-        </div>`;
-        $('#restaurants-container').append(cardHtml);
-      });
-    },
-    error: function(xhr, status, error) {
-      $('#restaurants-container').html(`
-        <div class="alert alert-danger text-center">
-          <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
-          <p><strong>الحالة:</strong> ${status}</p>
-          <p><strong>الرسالة:</strong> ${error}</p>
-        </div>
-      `);
-    }
-  });
+  $(document).ready(function() {
+    const lang = localStorage.getItem('site-lang')
+    const endpoint = '/restaurants?lang=' + lang;
+    $.ajax({
+      url: endpoint,
+      method: 'GET',
+      dataType: 'json',
+      success: function(data) {
+        $('#restaurants-container').empty();
+        $.each(data.data, function(index, r) {
+          const cardHtml = `
+          <div class="col-md-4">
+            <div class="card shadow-sm rounded">
+              <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+                <small>${r.cuisine}</small>
+              </div>
+              <div class="card-body">
+                                         <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area }</p>
+                         <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
+                        <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
 
-});
+                        </div>
+                                <div class="card-footer text-center">
+                          <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">
+                ${document.getElementById('bookNow')?.textContent || 'احجز الآن'}
+
+              </div>
+            </div>
+          </div>`;
+          $('#restaurants-container').append(cardHtml);
+        });
+      },
+      error: function(xhr, status, error) {
+        $('#restaurants-container').html(`
+          <div class="alert alert-danger text-center">
+            <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
+            <p><strong>الحالة:</strong> ${status}</p>
+            <p><strong>الرسالة:</strong> ${error}</p>
+          </div>
+        `);
+      }
+    });
+
+  });
 </script>
+
+<!-- 🔹 عناصر الترجمة المخفية للمطاعم -->
+<p class="d-none" id="location"></p>
+<p class="d-none" id="hours"></p>
+<p class="d-none" id="capacity"></p>
+<p class="d-none" id="bookNow"></p>
+<p class="d-none" id="guests"></p>
+
 
 {% endblock %}

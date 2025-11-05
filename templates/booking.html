@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}حجز طاولة{% endblock %}
+{% block title %}<span id="bookingTitle">حجز طاولة</span>{% endblock %}
 {% block content %}
 
 <style>
@@ -36,7 +36,7 @@
         <!-- قسم المطعم -->
         <div class="col-md-5">
             <div id="restaurantInfo" class="restaurant-info text-center">
-                <p>جاري تحميل بيانات المطعم...</p>
+                <p id="loadingRestaurant">جاري تحميل بيانات المطعم...</p>
             </div>
         </div>
 
@@ -47,33 +47,45 @@
 
         <!-- قسم الحجز -->
         <div class="col-md-6">
-            <h2 class="text-center mb-4">حجز طاولة</h2>
+            <h2 class="text-center mb-4" id="bookingSectionTitle">حجز طاولة</h2>
 
             <form id="bookingForm">
                 <div class="mb-3">
-                    <label for="date" class="form-label">التاريخ:</label>
+                    <label for="date" class="form-label" id="dateLabel">التاريخ:</label>
                     <input type="date" class="form-control" id="date" name="date" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="time" class="form-label">الوقت:</label>
+                    <label for="time" class="form-label" id="timeLabel">الوقت:</label>
                     <select id="time" name="time" class="form-select" required style="height: 45px;">
-                        <option value="">اختر الساعة</option>
+                        <option value="" id="timePlaceholder">اختر الساعة</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
-                    <label for="people" class="form-label">عدد الأشخاص:</label>
+                    <label for="people" class="form-label" id="peopleLabel">عدد الأشخاص:</label>
                     <input type="number" class="form-control" id="people" name="people" min="1" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">احجز الآن</button>
+                <button type="submit" class="btn btn-primary w-100" id="submitBtn">احجز الآن</button>
             </form>
 
             <div id="message" class="mt-3"></div>
         </div>
     </div>
 </div>
+
+<!-- عناصر الترجمة المخفية -->
+<p class="d-none" id="restaurantNameLabel">اسم المطعم</p>
+<p class="d-none" id="restaurantCuisineLabel">نوع المطبخ</p>
+<p class="d-none" id="restaurantAreaLabel">المنطقة</p>
+<p class="d-none" id="restaurantHoursLabel">ساعات العمل</p>
+<p class="d-none" id="restaurantCapacityLabel">السعة</p>
+<p class="d-none" id="restaurantNotFound">المطعم غير موجود</p>
+<p class="d-none" id="restaurantLoadError">حدث خطأ أثناء تحميل بيانات المطعم</p>
+<p class="d-none" id="bookingSuccess">✅ تم تأكيد الحجز بتاريخ {date} الساعة {time} لعدد {people} أشخاص.</p>
+<p class="d-none" id="bookingError">⚠️ حدث خطأ أثناء تنفيذ الحجز</p>
+<p class="d-none" id="connectionError">⚠️ خطأ في الاتصال بالخادم</p>
 
 <script>
     const select = document.getElementById('time');
@@ -83,47 +95,54 @@
         const hour12 = h % 12 === 0 ? 12 : h % 12;
 
         const option = document.createElement('option');
-        option.value = h.toString().padStart(2, '0') + ':00';  // القيمة للـ backend بصيغة 24 ساعة
-        option.textContent = `${hour12} ${period}`;            // النص المعروض للمستخدم
+        option.value = h.toString().padStart(2, '0') + ':00';
+        option.textContent = `${hour12} ${period}`;
         select.appendChild(option);
     }
 </script>
 
-
 <script>
-
     const form = document.getElementById('bookingForm');
     const message = document.getElementById('message');
     const infoDiv = document.getElementById('restaurantInfo');
 
     const restaurantId = "{{ restaurant_id }}";
     const restaurantIdNum = parseInt(restaurantId);
+    const lang = localStorage.getItem('site-lang') || 'ar';
 
-    // جلب بيانات المطعم
+    function translateText(id) {
+        const el = document.getElementById(id);
+        return el ? el.textContent : '';
+    }
+
     async function loadRestaurant(id) {
+        infoDiv.innerHTML = `<p>${translateText('loadingRestaurant')}</p>`;
         try {
-            const res = await fetch(`/restaurants/${id}`);
+            const lang = localStorage.getItem('site-lang') || 'ar';
+            const res = await fetch(`/restaurants/${id}?lang=${lang}`);
             const data = await res.json();
             if (data.status === "success") {
                 const r = data.data;
                 infoDiv.innerHTML = `
                     <h3>${r.name}</h3>
                     <p class="text-muted">${r.cuisine} • ${r.area}</p>
-                    <p>يفتح من <strong>${r.opens_at}</strong> إلى <strong>${r.closes_at}</strong></p>
-                    <p>السعة: ${r.capacity} شخص</p>
+                    <p>${translateText('restaurantHoursLabel')}: ${r.opens_at} - ${r.closes_at}</p>
+                    <p id="restaurantCapacityValue">
+    ${translateText('restaurantCapacityLabel')}: ${r.capacity} ${lang === 'ar' ? 'شخص' : 'guests'}
+</p>
+
                 `;
             } else {
-                infoDiv.innerHTML = `<div class="alert alert-danger">المطعم غير موجود</div>`;
+                infoDiv.innerHTML = `<div class="alert alert-danger">${translateText('restaurantNotFound')}</div>`;
             }
         } catch (err) {
             console.error(err);
-            infoDiv.innerHTML = `<div class="alert alert-danger">حدث خطأ أثناء تحميل بيانات المطعم</div>`;
+            infoDiv.innerHTML = `<div class="alert alert-danger">${translateText('restaurantLoadError')}</div>`;
         }
     }
 
     loadRestaurant(restaurantIdNum);
 
-    // إرسال بيانات الحجز
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -136,33 +155,25 @@
         };
 
         try {
-            const res = await fetch('/bookings', {
+            const res = await fetch('http://127.0.0.1:5000/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
-                credentials: 'include'  // ← هذا يرسل الكوكيز مع الطلب
+                credentials: 'include'
             });
-
 
             const result = await res.json();
             message.innerHTML = "";
 
             if (result.status === "success") {
-                message.innerHTML = `
-                    <div class="alert alert-success mt-3">
-                        ✅ تم تأكيد الحجز بتاريخ ${result.date} الساعة ${result.time} لعدد ${result.people} أشخاص.
-                    </div>`;
+                message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess').replace('{date}', result.date).replace('{time}', result.time).replace('{people}', result.people)}</div>`;
                 form.reset();
             } else {
-                message.innerHTML = `
-                    <div class="alert alert-danger mt-3">
-                        ⚠️ ${result.detail || "حدث خطأ أثناء تنفيذ الحجز"}
-                    </div>`;
+                message.innerHTML = `<div class="alert alert-danger mt-3">${result.detail || translateText('bookingError')}</div>`;
             }
-
         } catch (err) {
             console.error(err);
-            message.innerHTML = `<div class="alert alert-danger mt-3">⚠️ خطأ في الاتصال بالخادم</div>`;
+            message.innerHTML = `<div class="alert alert-danger mt-3">${translateText('connectionError')}</div>`;
         }
     });
 </script>

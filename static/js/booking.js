@@ -23,37 +23,28 @@ if (bookingForm) {
 
         try {
             const response = await fetch('/bookings', {
-                method: 'POST',
+                method: 'POST',                   // ← فاصلة بعد كل سطر إلا الأخير
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
-                credentials: 'include'
+                credentials: 'include'          
             });
 
             const result = await response.json();
-
-            // إظهار الرسالة
             messageDiv.style.display = 'block';
-
-            if (response.status === 401) {
-                // المستخدم غير مسجل دخول → إعادة توجيه للصفحة الرئيسية أو تسجيل الدخول
-                window.location.href = '/login';
-                return;
-            }
 
             if (response.ok) {
                 messageDiv.className = 'message success';
-                messageDiv.innerText = `✅ تم تأكيد الحجز في ${result.date} الساعة ${result.time}`;
+                messageDiv.innerText = `تم تأكيد الحجز في ${result.date} الساعة ${result.time}`;
                 bookingForm.reset();
             } else {
                 messageDiv.className = 'message error';
-                messageDiv.innerText = result.detail || '⚠️ حدث خطأ أثناء الحجز.';
+                messageDiv.innerText = result.detail || 'حدث خطأ أثناء الحجز.';
             }
-
         } catch (error) {
             messageDiv.style.display = 'block';
             messageDiv.className = 'message error';
-            messageDiv.innerText = '⚠️ حدث خطأ في الاتصال بالخادم.';
-            console.error("Booking error:", error);
+            messageDiv.innerText = 'حدث خطأ في الاتصال بالخادم.';
+            console.error(error);
         }
     });
 }

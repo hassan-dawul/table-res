@@ -103,6 +103,29 @@ $(document).ready(function() {
     "no_account_text": "ليس لديك حساب؟",
     "register_link": "إنشاء حساب جديد",
     "footer-text": "حقوق الطبع والنشر © 2025 - طاولتك",
+    //booking
+        "bookingTitle": "حجز طاولة",
+        "bookingSectionTitle": "حجز طاولة",
+        "dateLabel": "التاريخ:",
+        "timeLabel": "الوقت:",
+        "timePlaceholder": "اختر الساعة",
+        "peopleLabel": "عدد الأشخاص:",
+        "submitBtn": "احجز الآن",
+        "loadingRestaurant": "جاري تحميل بيانات المطعم...",
+        "restaurantNameLabel": "اسم المطعم",
+        "restaurantCuisineLabel": "نوع المطبخ",
+        "restaurantAreaLabel": "المنطقة",
+        "restaurantHoursLabel": "ساعات العمل",
+        "restaurantCapacityLabel": "السعة",
+        "restaurantNotFound": "المطعم غير موجود",
+        "restaurantLoadError": "حدث خطأ أثناء تحميل بيانات المطعم",
+        "bookingSuccess": "✅ تم تأكيد الحجز بتاريخ {date} الساعة {time} لعدد {people} أشخاص.",
+        "bookingError": "⚠️ حدث خطأ أثناء تنفيذ الحجز",
+        "connectionError": "⚠️ خطأ في الاتصال بالخادم",
+        "restaurantCapacityValue": "شخص",
+
+
+    
 
 
 
@@ -213,7 +236,28 @@ $(document).ready(function() {
     "login_btn": "Sign In",
     "no_account_text": "Don’t have an account?",
     "register_link": "Create new account",
-    "footer-text": "Copyright © 2025 - Your Table"
+    //booking
+    "footer-text": "Copyright © 2025 - Tawletk",
+        "bookingTitle": "Table Booking",
+        "bookingSectionTitle": "Table Booking",
+        "dateLabel": "Date:",
+        "timeLabel": "Time:",
+        "timePlaceholder": "Select time",
+        "peopleLabel": "Number of people:",
+        "submitBtn": "Book Now",
+        "loadingRestaurant": "Loading restaurant data...",
+        "restaurantNameLabel": "Restaurant Name",
+        "restaurantCuisineLabel": "Cuisine Type",
+        "restaurantAreaLabel": "Area",
+        "restaurantHoursLabel": "Working Hours",
+        "restaurantCapacityLabel": "Capacity",
+        "restaurantNotFound": "Restaurant not found",
+        "restaurantLoadError": "Error loading restaurant data",
+        "bookingSuccess": "✅ Booking confirmed on {date} at {time} for {people} people.",
+        "bookingError": "⚠️ Error processing the booking",
+        "connectionError": "⚠️ Connection error",
+        "restaurantCapacityValue": "Capacity",
+
 
 
     }

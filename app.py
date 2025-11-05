@@ -299,19 +299,25 @@ def restaurants_page(request: Request):
     return templates.TemplateResponse("restaurants.html", {"request": request})
 
 
-# المطاعم - قراءة مطعم واحد
+from fastapi import Query
+
 @app.get("/restaurants/{restaurant_id}")
-def get_restaurant_by_id(restaurant_id: int, db: Session = Depends(get_db)):
+def get_restaurant_by_id(
+    restaurant_id: int,
+    lang: str = Query("ar"),  # اللغة الافتراضية عربي
+    db: Session = Depends(get_db)
+):
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
+    
     return {
         "status": "success",
         "data": {
             "id": restaurant.id,
-            "name": restaurant.name,
-            "area": restaurant.area,
-            "cuisine": restaurant.cuisine,
+            "name": restaurant.name if lang == "ar" else restaurant.name_en or restaurant.name,
+            "area": restaurant.area if lang == "ar" else restaurant.area_en or restaurant.area,
+            "cuisine": restaurant.cuisine if lang == "ar" else restaurant.cuisine_en or restaurant.cuisine,
             "opens_at": restaurant.opens_at.strftime("%H:%M"),
             "closes_at": restaurant.closes_at.strftime("%H:%M"),
             "capacity": restaurant.capacity,

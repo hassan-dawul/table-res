@@ -74,11 +74,11 @@ $(document).ready(function() {
       "hours": "ساعات العمل",
       "capacity": "السعة",
       "bookNow": "احجز الآن",
+      "cuisineType": "نوع المطبخ",
       
       "filters": "الفلاتر",
       "searchPlaceholder": "ابحث عن مطعم...",
       "search-btn": "بحث",
-      "cuisine-filters": "نوع المطبخ",
       "area": "المنطقة",
       "all": "الكل",
       "workingHours": "ساعات العمل",
@@ -86,6 +86,23 @@ $(document).ready(function() {
       "bookNow": "احجز الآن",
       "guests": "ضيف",
       "errorFetch": "حدث خطأ في جلب بيانات المطاعم.",
+      // register
+    "register-title": "إنشاء حساب جديد",
+    "label-fullname": "اسم المستخدم",
+    "label-email": "البريد الإلكتروني",
+    "label-password": "كلمة المرور",
+    "password-hint": "يجب أن تتراوح كلمة المرور بين 8 و20 حرفًا وتحتوي على حروف وأرقام فقط.",
+    "label-confirm": "تأكيد كلمة المرور",
+    "register-btn": "تسجيل",
+    "already-have": "لديك حساب؟",
+    "login-link": "تسجيل الدخول",
+        // login
+    "login_title": "تسجيل الدخول",
+    "password_label": "كلمة المرور",
+    "login_btn": "تسجيل الدخول",
+    "no_account_text": "ليس لديك حساب؟",
+    "register_link": "إنشاء حساب جديد",
+    "footer-text": "حقوق الطبع والنشر © 2025 - طاولتك",
 
 
 
@@ -176,8 +193,27 @@ $(document).ready(function() {
       "capacity": "Capacity",
       "bookNow": "Book Now",
       "guests": "Guests",
-      "errorFetch": "Error fetching restaurant data."
+      "errorFetch": "Error fetching restaurant data.",    
 
+      // register
+    "register-title": "Create a New Account",
+    "label-fullname": "Username",
+    "label-email": "Email Address",
+    "label-password": "Password",
+    "password-hint": "Password must be 8–20 characters long and contain letters and numbers only.",
+    "label-confirm": "Confirm Password",
+    "register-btn": "Sign Up",
+    "already-have": "Already have an account?",
+    "login-link": "Login",
+
+    // login
+    "login_title": "Login",
+    "email_label": "Email",
+    "password_label": "Password",
+    "login_btn": "Sign In",
+    "no_account_text": "Don’t have an account?",
+    "register_link": "Create new account",
+    "footer-text": "Copyright © 2025 - Your Table"
 
 
     }

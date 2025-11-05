@@ -4,45 +4,46 @@
 {% block content %}
 <main class="form-signin w-100 m-auto mt-5" style="max-width: 400px;">
     <form id="registerForm">
-        <h1 class="h3 mb-3 fw-normal text-center">إنشاء حساب جديد</h1>
+        <h1 id="register-title" class="h3 mb-3 fw-normal text-center">إنشاء حساب جديد</h1>
 
         <!-- حقل الاسم الكامل -->
         <div class="mb-3">
-            <label for="fullname" class="form-label">اسم المستخدم</label>
+            <label for="fullname" id="label-fullname" class="form-label">اسم المستخدم</label>
             <input type="text" class="form-control" id="fullname" required>
         </div>
 
         <!-- حقل البريد الإلكتروني -->
         <div class="mb-3">
-            <label for="email" class="form-label">البريد الإلكتروني</label>
+            <label for="email" id="label-email" class="form-label">البريد الإلكتروني</label>
             <input type="email" class="form-control" id="email" placeholder="name@gmail.com" required>
         </div>
 
         <!-- حقل كلمة المرور -->
         <div class="mb-3">
-            <label for="password" class="form-label">كلمة المرور</label>
+            <label for="password" id="label-password" class="form-label">كلمة المرور</label>
             <input type="password" class="form-control" id="password" required>
-            <div class="form-text">
+            <div id="password-hint" class="form-text">
                 يجب أن تتراوح كلمة المرور بين 8 و20 حرفًا وتحتوي على حروف وأرقام فقط.
             </div>
         </div>
 
         <!-- تأكيد كلمة المرور -->
         <div class="mb-3">
-            <label for="confirm" class="form-label">تأكيد كلمة المرور</label>
+            <label for="confirm" id="label-confirm" class="form-label">تأكيد كلمة المرور</label>
             <input type="password" class="form-control" id="confirm" required>
         </div>
 
         <!-- زر التسجيل -->
-        <button class="btn btn-primary w-100 py-2" type="submit">تسجيل</button>
+        <button id="register-btn" class="btn btn-primary w-100 py-2" type="submit">تسجيل</button>
 
         <!-- رسالة الأخطاء -->
         <div id="errorMsg" class="text-danger mt-2"></div>
 
-        <p class="mt-3 text-center">لديك حساب؟ <a href="/login">تسجيل الدخول</a></p>
+        <p id="already-have" class="mt-3 text-center">لديك حساب؟ <a id="login-link" href="/login">تسجيل الدخول</a></p>
     </form>
 </main>
 
+<script src="/static/js/lang.js"></script>
 <script>
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault(); // منع إعادة تحميل الصفحة
@@ -62,10 +63,8 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         const data = await response.json();
 
         if (response.ok) {
-            // التسجيل ناجح → ننتقل مباشرة لصفحة تسجيل الدخول
             window.location.href = '/login';
         } else {
-            // عرض رسالة الخطأ القادمة من API
             document.getElementById('errorMsg').textContent = data.message || 'حدث خطأ ما';
         }
     } catch (err) {

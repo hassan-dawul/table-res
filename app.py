@@ -79,6 +79,12 @@ def admin_bookings_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("admin_bookings.html", {"request": request})
 
 
+@app.get("/contact", response_class=HTMLResponse)
+def contact_page(request: Request):
+    return templates.TemplateResponse("contact.html", {"request": request})
+
+
+
 
 # إضافة middleware الخاص بـ slowapi
 app.add_middleware(SlowAPIMiddleware)
@@ -709,38 +715,45 @@ async def create_booking(
     }
 # استعراض كل حجوزات المستخدم
 @app.get("/api/bookings")
-def list_user_bookings(request: Request, db: Session = Depends(get_db)):
-    # الحصول على المستخدم الحالي من الجلسة
-    user = get_current_user_from_session(request, db)  # احرص على تمرير request الفعلي
+def list_user_bookings(
+    request: Request,
+    db: Session = Depends(get_db),
+    lang: str = Query("ar")  # ✅ اللغة تجي من الرابط
+):
+    print("📢 اللغة المستلمة:", lang)
+
+    user = get_current_user_from_session(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="يجب تسجيل الدخول لرؤية الحجوزات.")
 
-    # جلب جميع حجوزات المستخدم من قاعدة البيانات
-
     bookings = (
         db.query(Booking)
-        .options(joinedload(Booking.restaurant))  # هذا يقوم بعمل JOIN تلقائي
+        .options(joinedload(Booking.restaurant))
         .filter(Booking.user_id == user.id)
-        .order_by(Booking.date.desc()) 
+        .order_by(Booking.date.desc())
         .all()
     )
 
-    # إعادة قائمة الحجوزات كـ JSON
-    return {
-        "status": "success",
-        "data": [
-            {
+    data = []
+    for b in bookings:
+        if not b.restaurant:
+            restaurant_name = "غير معروف"
+        else:
+            # ✅ اختيار الاسم حسب اللغة
+            restaurant_name = b.restaurant.name_en if lang == "en" else b.restaurant.name
 
+        data.append({
             "id": b.id,
-            "restaurant_name": b.restaurant.name if b.restaurant else "غير معروف",
+            "restaurant_name": restaurant_name,
             "date": b.date.isoformat(),
             "time": b.time.strftime("%H:%M"),
             "people": b.people,
             "status": b.status,
             "created_at": b.created_at.isoformat(),
             "updated_at": b.updated_at.isoformat()
-        } for b in bookings]
-    }
+        })
+
+    return {"status": "success", "data": data}
 
 
 # عرض جميع الحجوزات - خاص بالأدمن فقط

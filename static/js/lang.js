@@ -123,6 +123,19 @@ $(document).ready(function() {
         "bookingError": "⚠️ حدث خطأ أثناء تنفيذ الحجز",
         "connectionError": "⚠️ خطأ في الاتصال بالخادم",
         "restaurantCapacityValue": "شخص",
+        //contact
+"contactTitle": "تواصل معنا",
+"contactIntro": "إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.",
+"labelName": "الاسم",
+"labelEmail": "البريد الإلكتروني",
+"labelSubject": "الموضوع",
+"labelMessage": "الرسالة",
+"sendBtn": "إرسال",
+"successMsg": "✅ تم إرسال الرسالة بنجاح. سنرد عليك قريباً.",
+"errorMsg": "حدث خطأ أثناء إرسال الرسالة. حاول لاحقاً.",
+"invalidFields": "الرجاء تعبئة الحقول المطلوبة.",
+
+  
 
 
     
@@ -257,6 +270,20 @@ $(document).ready(function() {
         "bookingError": "⚠️ Error processing the booking",
         "connectionError": "⚠️ Connection error",
         "restaurantCapacityValue": "Capacity",
+        //contact
+"contactTitle": "Contact Us",
+"contactIntro": "If you have a question or suggestion, send us a message and we'll reply soon.",
+"labelName": "Name",
+"labelEmail": "Email",
+"labelSubject": "Subject",
+"labelMessage": "Message",
+"sendBtn": "Send",
+"successMsg": "✅ Message sent successfully. We'll get back to you soon.",
+"errorMsg": "An error occurred while sending. Please try again later.",
+"invalidFields": "Please fill in the required fields.",
+
+
+
 
 
 

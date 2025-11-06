@@ -85,7 +85,9 @@ async function loadUserBookings() {
     };
 
     try {
-        const res = await fetch('/api/bookings', { credentials: 'include' });
+        const lang = localStorage.getItem('site-lang') || 'ar';
+const res = await fetch(`/api/bookings?lang=${lang}`, { credentials: 'include' });
+
         const result = await res.json();
         const bookings = result.data;
 

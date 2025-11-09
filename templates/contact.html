@@ -1,139 +1,102 @@
 {% extends "base.html" %}
+
 {% block title %}تواصل معنا{% endblock %}
+
 {% block content %}
+<main class="container py-5" style="max-width: 600px;">
+    <h1 id="contact-title" class="text-center mb-4">تواصل معنا</h1>
+    <p id="contact-intro" class="text-center mb-4">إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.</p>
 
-<main class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h3 id="contact-title">تواصل معنا</h3>
+    <form id="contactForm">
+        <div class="mb-3">
+            <label for="name" id="label-name" class="form-label">الاسم</label>
+            <input type="text" class="form-control" id="name" placeholder="الاسم" required>
         </div>
-        <div class="card-body">
-          <p id="contact-intro">إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.</p>
 
-          <form id="contactForm">
-            <div class="mb-3">
-              <label for="name" class="form-label" id="label-name">الاسم</label>
-              <input type="text" class="form-control" id="name" placeholder="">
-            </div>
-
-            <div class="mb-3">
-              <label for="email" class="form-label" id="label-email">البريد الإلكتروني</label>
-              <input type="email" class="form-control" id="email" placeholder="">
-            </div>
-
-            <div class="mb-3">
-              <label for="subject" class="form-label" id="label-subject">الموضوع</label>
-              <input type="text" class="form-control" id="subject" placeholder="">
-            </div>
-
-            <div class="mb-3">
-              <label for="message" class="form-label" id="label-message">الرسالة</label>
-              <textarea class="form-control" id="message" rows="6" placeholder=""></textarea>
-            </div>
-
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary fw-bold" id="send-btn">إرسال</button>
-            </div>
-
-            <div class="mt-3" id="contact-alert" style="display:none;"></div>
-          </form>
+        <div class="mb-3">
+            <label for="email" id="label-email" class="form-label">البريد الإلكتروني</label>
+            <input type="email" class="form-control" id="email" placeholder="you@gmail.com" required>
         </div>
-      </div>
-    </div>
-  </div>
+
+        <div class="mb-3">
+            <label for="subject" id="label-subject" class="form-label">الموضوع</label>
+            <input type="text" class="form-control" id="subject" placeholder="موضوع الرسالة" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="message" id="label-message" class="form-label">الرسالة</label>
+            <textarea class="form-control" id="message" rows="5" placeholder="اكتب رسالتك هنا..." required></textarea>
+        </div>
+
+        <button type="submit" id="send-btn" class="btn btn-primary w-100 py-2">إرسال</button>
+        <div id="formMessage" class="mt-3 text-center text-danger"></div>
+    </form>
 </main>
 
-<!-- عناصر ترجمة مخفية (تماثل أسلوبك) -->
-<p class="d-none" id="contactTitle"></p>
-<p class="d-none" id="contactIntro"></p>
-<p class="d-none" id="labelName"></p>
-<p class="d-none" id="labelSubject"></p>
-<p class="d-none" id="labelMessage"></p>
-<p class="d-none" id="sendBtn"></p>
-<p class="d-none" id="successMsg"></p>
-<p class="d-none" id="errorMsg"></p>
-<p class="d-none" id="invalidFields"></p>
+<!-- عناصر الـ placeholder المخفية -->
+<p class="d-none" id="namePlaceholder">الاسم</p>
+<p class="d-none" id="subjectPlaceholder">موضوع الرسالة</p>
+<p class="d-none" id="messagePlaceholder">اكتب رسالتك هنا...</p>
+
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const lang = localStorage.getItem('site-lang') || 'ar';
+    $(document).ready(function() {
 
-  // سحب الترجمات المخفية أو تحديد افتراضي
-  const t = (id, fallback) => document.getElementById(id)?.textContent || fallback;
+    // الاسم
+    var nameInput = document.getElementById("name");
+    const namePlaceholder = document.getElementById("namePlaceholder")?.textContent || "الاسم";
+    nameInput.placeholder = namePlaceholder;
 
-  // تعيين نصوص الصفحة والـ placeholders حسب عناصر الترجمة
-  document.getElementById('contact-title').textContent = t('contactTitle', 'تواصل معنا');
-  document.getElementById('contact-intro').textContent = t('contactIntro', 'إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.');
+    // الموضوع
+    var subjectInput = document.getElementById("subject");
+    const subjectPlaceholder = document.getElementById("subjectPlaceholder")?.textContent || "موضوع الرسالة";
+    subjectInput.placeholder = subjectPlaceholder;
 
-  document.getElementById('label-name').textContent = t('labelName', 'الاسم');
-  document.getElementById('label-email').textContent = t('labelEmail', 'البريد الإلكتروني');
-  document.getElementById('label-subject').textContent = t('labelSubject', 'الموضوع');
-  document.getElementById('label-message').textContent = t('labelMessage', 'الرسالة');
+    // الرسالة
+    var messageInput = document.getElementById("message");
+    const messagePlaceholder = document.getElementById("messagePlaceholder")?.textContent || "اكتب رسالتك هنا...";
+    messageInput.placeholder = messagePlaceholder;
 
-  document.getElementById('name').placeholder = t('labelName', 'الاسم');
-  document.getElementById('email').placeholder = t('labelEmail', 'you@gmail.com');
-  document.getElementById('subject').placeholder = t('labelSubject', 'موضوع الرسالة');
-  document.getElementById('message').placeholder = t('labelMessage', 'اكتب رسالتك هنا...');
+    // 🔹 التعامل مع الفورم
+    const contactForm = document.getElementById('contactForm');
+    const formMessage = document.getElementById('formMessage');
 
-  document.getElementById('send-btn').textContent = t('sendBtn', 'إرسال');
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-  // التعامل مع إرسال النموذج
-  const form = document.getElementById('contactForm');
-  const alertDiv = document.getElementById('contact-alert');
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            subject: document.getElementById('subject').value,
+            message: document.getElementById('message').value
+        };
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    alertDiv.style.display = 'none';
-    alertDiv.className = '';
+        try {
+            const response = await fetch('/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-    const payload = {
-      name: document.getElementById('name').value.trim(),
-      email: document.getElementById('email').value.trim(),
-      subject: document.getElementById('subject').value.trim(),
-      message: document.getElementById('message').value.trim()
-    };
+            const data = await response.json();
 
-    // تحقق بسيط من الحقول
-    if (!payload.name || !payload.email || !payload.message) {
-      alertDiv.style.display = 'block';
-      alertDiv.className = 'alert alert-warning';
-      alertDiv.textContent = t('invalidFields', 'الرجاء تعبئة الحقول المطلوبة.');
-      return;
-    }
+            if(response.ok) {
+                formMessage.classList.remove('text-danger');
+                formMessage.classList.add('text-success');
+                formMessage.innerText = data.message || 'تم إرسال الرسالة بنجاح!';
+                contactForm.reset();
+            } else {
+                formMessage.classList.remove('text-success');
+                formMessage.classList.add('text-danger');
+                formMessage.innerText = data.message || 'حدث خطأ أثناء الإرسال';
+            }
 
-    try {
-      // نرسل اللغة كـ query param مثل صفحاتك الأخرى
-      const res = await fetch(`/api/contact?lang=${lang}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.status === 'success') {
-        alertDiv.style.display = 'block';
-        alertDiv.className = 'alert alert-success';
-        alertDiv.textContent = t('successMsg', '✅ تم إرسال الرسالة بنجاح. سنرد عليك قريباً.');
-
-        // إعادة تهيئة النموذج بعد الإرسال
-        form.reset();
-      } else {
-        alertDiv.style.display = 'block';
-        alertDiv.className = 'alert alert-danger';
-        alertDiv.textContent = data.detail || t('errorMsg', 'حدث خطأ أثناء إرسال الرسالة. حاول لاحقاً.');
-      }
-    } catch (err) {
-      console.error(err);
-      alertDiv.style.display = 'block';
-      alertDiv.className = 'alert alert-danger';
-      alertDiv.textContent = t('errorMsg', 'فشل الاتصال بالخادم. تحقق من اتصالك.');
-    }
-  });
+        } catch (err) {
+            formMessage.classList.remove('text-success');
+            formMessage.classList.add('text-danger');
+            formMessage.innerText = 'خطأ في الاتصال بالخادم';
+        }
+    });
 });
 </script>
-
 {% endblock %}

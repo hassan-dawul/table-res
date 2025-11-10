@@ -249,12 +249,33 @@ def get_restaurants(
 ):
     query = db.query(Restaurant)
 
+    # ======= التعديلات هنا =======
     if area:
-        query = query.filter(Restaurant.area == area if lang=="ar" else Restaurant.area_en == area)
+        if lang == "ar":
+            query = query.filter(Restaurant.area.ilike(f"%{area}%"))
+        else:
+            query = query.filter(Restaurant.area_en.ilike(f"%{area}%"))
+
     if cuisine:
-        query = query.filter(Restaurant.cuisine == cuisine if lang=="ar" else Restaurant.cuisine_en == cuisine)
+        if lang == "ar":
+            query = query.filter(Restaurant.cuisine.ilike(f"%{cuisine}%"))
+        else:
+            query = query.filter(Restaurant.cuisine_en.ilike(f"%{cuisine}%"))
+
     if search:
-        query = query.filter(Restaurant.name.ilike(f"%{search}%") if lang=="ar" else Restaurant.name_en.ilike(f"%{search}%"))
+        if lang == "ar":
+            query = query.filter(
+                Restaurant.name.ilike(f"%{search}%") |
+                Restaurant.area.ilike(f"%{search}%") |
+                Restaurant.cuisine.ilike(f"%{search}%")
+            )
+        else:
+            query = query.filter(
+                Restaurant.name_en.ilike(f"%{search}%") |
+                Restaurant.area_en.ilike(f"%{search}%") |
+                Restaurant.cuisine_en.ilike(f"%{search}%")
+            )
+    # =============================
 
     restaurants = query.limit(limit).all()
 
@@ -573,15 +594,17 @@ class BookingStatus(str, Enum):
 
 # موديل لإنشاء حجز جديد
 class BookingCreate(BaseModel):
+    lang: str
     restaurant_id: int
     date: str  # YYYY-MM-DD
     time: str  # HH:MM
     people: conint(gt=0)  # pyright: ignore[reportInvalidTypeForm] # NEW: التحقق من أن عدد الأشخاص أكبر من صفر
 
     @validator('date')
-    def validate_date(cls, v):
+    def validate_date(cls, v, values):
+        print(values)
+        lang = values.get("lang", "ar")
         
-
         if v is None:
             return v
 
@@ -593,7 +616,7 @@ class BookingCreate(BaseModel):
         
         # ✅ تحقق من أن التاريخ ليس ماضيًا
         if d < datetime.utcnow().date():
-            raise HTTPException(status_code=400, detail="لا يمكن الحجز في تاريخ ماضٍ.")
+            raise HTTPException(status_code=400, detail="لا يمكن الحجز في تاريخ ماضٍ." if lang == 'ar' else "Cannot book a past date")
       
         return v
 
@@ -660,10 +683,9 @@ async def create_booking(
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
     booking_time = datetime.strptime(booking.time, "%H:%M").time()
 
-    
     # منع الحجز في وقت ماضي لنفس اليوم
-    if booking.date == datetime.now().date() and booking.time <= datetime.now().time(): 
-        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ اليوم.") 
+    if booking_date == datetime.now().date() and booking_time <= datetime.now().time(): 
+        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ اليوم." if booking.lang == 'ar' else 'Cannot book in past hour') 
 
     # التأكد من أن وقت الحجز داخل ساعات عمل المطعم
     if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:

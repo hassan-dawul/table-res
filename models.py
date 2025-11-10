@@ -18,7 +18,6 @@ class User(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     role = Column(String(50), default="user", nullable=False)
-    
 
     # علاقة الحجوزات: كل مستخدم يمكن أن يكون له عدة حجوزات
     bookings = relationship("Booking", back_populates="user")

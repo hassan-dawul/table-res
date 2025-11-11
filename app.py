@@ -25,10 +25,11 @@ from slowapi.middleware import SlowAPIMiddleware
 from pydantic import BaseModel, validator, EmailStr, conint
 
 from db import SessionLocal, engine, Base, get_db
-from models import User, Restaurant, Booking, BookingStatus
+from models import User, Restaurant, Booking, BookingStatus, ContactMessage
 from fastapi import Request, Depends
 from emails import send_welcome_email, send_booking_confirmation, send_booking_cancellation
 from fuzzywuzzy import fuzz
+
 
 
 
@@ -947,6 +948,37 @@ def cancel_booking(booking_id: int, request: Request, db: Session = Depends(get_
         "message": "تم إلغاء الحجز بنجاح وتم إرسال إشعار عبر البريد الإلكتروني."
     }
 
+@app.post("/contact")
+async def contact_submit(request: Request):
+    data = await request.json()
+    name = data.get("name")
+    email = data.get("email")
+    subject = data.get("subject")
+    message = data.get("message")
+    lang = data.get("lang", "ar")  # افتراضي عربي
+
+    # فتح جلسة مع قاعدة البيانات
+    db: Session = SessionLocal()
+    try:
+        new_message = ContactMessage(
+            name=name,
+            email=email,
+            subject=subject,
+            message=message
+        )
+        db.add(new_message)
+        db.commit()
+        db.refresh(new_message)
+    finally:
+        db.close()
+
+    # ترجمة الرسالة حسب اللغة
+    response_msg = (
+        "تم إرسال الرسالة وحفظها في قاعدة البيانات!" if lang == "ar"
+        else "Message sent successfully and saved in the database!"
+    )
+
+    return JSONResponse({"message": response_msg})
 
 
 FastAPI

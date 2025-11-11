@@ -1,8 +1,12 @@
-from sqlalchemy import Column, Integer, String, DateTime, Time, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Time, Enum, ForeignKey, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 from db import Base  # تأكد أن Base مستورد من db
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
+
+
 
 # -------------------------------
 # جدول المستخدمين
@@ -67,3 +71,14 @@ class Booking(Base):
     # الربط بالعلاقات
     user = relationship("User", back_populates="bookings")
     restaurant = relationship("Restaurant", back_populates="bookings")
+
+ # إعداد نموذج الرسائل في قاعدة 
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(100), nullable=False)
+    subject = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

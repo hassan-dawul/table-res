@@ -25,8 +25,7 @@ def send_email(to_email, subject, body):
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            # server.login(SMTP_USERNAME, SMTP_PASSWORD)X
             server.send_message(msg)
         print(f"Email sent to {to_email} successfully!")
     except Exception as e:

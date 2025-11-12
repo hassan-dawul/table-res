@@ -29,6 +29,9 @@ from models import User, Restaurant, Booking, BookingStatus, ContactMessage
 from fastapi import Request, Depends
 from emails import send_welcome_email, send_booking_confirmation, send_booking_cancellation
 from fuzzywuzzy import fuzz
+from datetime import date
+from sqlalchemy import func, and_, or_
+
 
 
 
@@ -253,76 +256,88 @@ def normalize_text(text: str):
         .strip()
     )
 
-# 🔹 جلب جميع المطاعم مع بحث ذكي وفلاتر
+# 🔹 جلب جميع المطاعم مع بحث ذكي وفلاتر + عدد الحجز اليوم + ترتيب حسب أعلى الحجوزات
 @app.get("/restaurants")
 def get_restaurants(
+    search: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
     cuisine: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    lang: str = Query("ar"),  # اللغة الافتراضية عربي
-    limit: Optional[int] = Query(None),
+    lang: str = Query("ar"),
+    limit: Optional[int] = Query(3),
     db: Session = Depends(get_db)
 ):
-    # جلب كل المطاعم
-    restaurants = db.query(Restaurant).all()
-    filtered = []
+    today = date.today()
 
-    for r in restaurants:
-        # الحقول للبحث: عربي + إنجليزي
-        fields = [
-            r.name, r.name_en,
-            r.area, r.area_en,
-            r.cuisine, r.cuisine_en
-        ]
+    # جدول المطاعم + عدد الحجوزات اليوم
+    query = (
+        db.query(
+            Restaurant,
+            func.count(Booking.id).label("today_bookings")
+        )
+        .outerjoin(
+            Booking,
+            (Booking.restaurant_id == Restaurant.id) & (Booking.date == today)
+        )
+    )
 
-        # ===== فلترة المنطقة =====
-        if area:
-            if not any(area.lower() in (f.lower() or "") for f in [r.area, r.area_en]):
-                continue
-
-        # ===== فلترة نوع المطبخ =====
-        if cuisine:
-            if not any(cuisine.lower() in (f.lower() or "") for f in [r.cuisine, r.cuisine_en]):
-                continue
-
-        # ===== البحث الذكي =====
-        if search:
-            normalized_search = normalize_text(search)
-            if not any(fuzz.partial_ratio(normalize_text(f), normalized_search) >= 70 for f in fields):
-                continue
-
-        filtered.append(r)
-
-    # ترتيب النتائج حسب التشابه مع البحث إذا وجد
-    if search:
-        normalized_search = normalize_text(search)
-        filtered.sort(
-            key=lambda r: max(fuzz.partial_ratio(normalize_text(f or ""), normalized_search) for f in [
-                r.name, r.name_en, r.area, r.area_en, r.cuisine, r.cuisine_en
-            ]),
-            reverse=True
+    # ===== فلترة =====
+    if area:
+        query = query.filter(
+            or_(
+                Restaurant.area.ilike(f"%{area}%"),
+                Restaurant.area_en.ilike(f"%{area}%")
+            )
+        )
+    if cuisine:
+        query = query.filter(
+            or_(
+                Restaurant.cuisine.ilike(f"%{cuisine}%"),
+                Restaurant.cuisine_en.ilike(f"%{cuisine}%")
+            )
         )
 
-    # تحديد العدد إذا حدد limit
-    if limit:
-        filtered = filtered[:limit]
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Restaurant.name.ilike(search_pattern),
+                Restaurant.name_en.ilike(search_pattern),
+                Restaurant.area.ilike(search_pattern),
+                Restaurant.area_en.ilike(search_pattern),
+                Restaurant.cuisine.ilike(search_pattern),
+                Restaurant.cuisine_en.ilike(search_pattern)
+            )
+        )
 
-    # تحويل النتائج للـ JSON → اختيار اللغة حسب lang
-    result = [
+    # تجميع وعدّ الحجوزات اليوم لكل مطعم
+    query = query.group_by(Restaurant.id)
+
+    # ترتيب حسب أكثر عدد حجوزات اليوم
+    query = query.order_by(func.count(Booking.id).desc())
+
+    # حد أقصى
+    if limit:
+        query = query.limit(limit)
+
+    results = query.all()
+
+    # تحويل النتائج للـ JSON مع اللغة
+    data = [
         {
-            "id": r.id,
-            "name": r.name if lang == "ar" else r.name_en or r.name,
-            "area": r.area if lang == "ar" else r.area_en or r.area,
-            "cuisine": r.cuisine if lang == "ar" else r.cuisine_en or r.cuisine,
-            "opens_at": r.opens_at.strftime("%H:%M"),
-            "closes_at": r.closes_at.strftime("%H:%M"),
-            "capacity": r.capacity,
-            "created_at": r.created_at.isoformat(),
-            "updated_at": r.updated_at.isoformat()
-        } for r in filtered
+            "id": r.Restaurant.id,
+            "name": r.Restaurant.name if lang == "ar" else r.Restaurant.name_en or r.Restaurant.name,
+            "area": r.Restaurant.area if lang == "ar" else r.Restaurant.area_en or r.Restaurant.area,
+            "cuisine": r.Restaurant.cuisine if lang == "ar" else r.Restaurant.cuisine_en or r.Restaurant.cuisine,
+            "opens_at": r.Restaurant.opens_at.strftime("%H:%M"),
+            "closes_at": r.Restaurant.closes_at.strftime("%H:%M"),
+            "capacity": r.Restaurant.capacity,
+            "today_bookings": r.today_bookings,
+            "created_at": r.Restaurant.created_at.isoformat(),
+            "updated_at": r.Restaurant.updated_at.isoformat()
+        } for r in results
     ]
 
-    return {"status": "success", "data": result}
+    return {"status": "success", "data": data}
 
 
 # ====== المطاعم - جلب قائمة الفلاتر ======

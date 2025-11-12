@@ -61,6 +61,8 @@
 <p class="d-none" id="errorFetch"></p>
 <p class="d-none" id="errorFetchMsg"></p>
 <p class="d-none" id="noRestaurantsMsg"></p>
+<p class="d-none" id="todayBookingsLabel"></p>
+
 
 
 <script>
@@ -103,6 +105,10 @@ $(document).ready(function() {
                                 <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area}</p>
                                 <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
                                 <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
+                                <p><strong>${document.getElementById('todayBookingsLabel')?.textContent || 'عدد الحجز اليوم'}:</strong> ${r.today_bookings}</p>
+
+
+
                             </div>
                             <div class="card-footer text-center">
                                 <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">
@@ -113,6 +119,7 @@ $(document).ready(function() {
                     </div>`;
                 restaurantList.insertAdjacentHTML("beforeend", cardHtml);
             });
+
 
             if ((result.data || result).length === 0) {
                 restaurantList.innerHTML = `<p class="text-white text-center">${document.getElementById('noRestaurantsMsg')?.textContent || 'لا توجد مطاعم مطابقة للبحث.'}</p>`;

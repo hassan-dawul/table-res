@@ -88,6 +88,8 @@ $(document).ready(function() {
       "errorFetch": "حدث خطأ في جلب بيانات المطاعم.",
               "errorFetchMsg": "حدث خطأ في جلب بيانات المطاعم.",
         "noRestaurantsMsg": "لا توجد مطاعم مطابقة للبحث.",
+        "todayBookingsLabel": "عدد الحجز اليوم",
+
 
       // register
     "register-title": "إنشاء حساب جديد",
@@ -235,9 +237,10 @@ $(document).ready(function() {
       "capacity": "Capacity",
       "bookNow": "Book Now",
       "guests": "Guests",
-      "errorFetch": "Error fetching restaurant data.",  
+      "errorFetch": "Error fetching restaurant data.", 
               "errorFetchMsg": "Failed to fetch restaurant data.",
         "noRestaurantsMsg": "No restaurants match your search.",
+        "todayBookingsLabel": "Bookings Today",
   
 
       // register

@@ -214,6 +214,7 @@
                                          <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area }</p>
                          <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
                         <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
+                        <p><strong>${document.getElementById('todayBookingsLabel')?.textContent || 'عدد الحجز اليوم'}:</strong> ${r.today_bookings}</p>
 
                         </div>
                                 <div class="card-footer text-center">
@@ -246,6 +247,8 @@
 <p class="d-none" id="capacity"></p>
 <p class="d-none" id="bookNow"></p>
 <p class="d-none" id="guests"></p>
+<p class="d-none" id="todayBookingsLabel"></p>
+
 
 
 {% endblock %}

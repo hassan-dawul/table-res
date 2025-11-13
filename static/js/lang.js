@@ -128,6 +128,12 @@ $(document).ready(function() {
         "bookingError": "⚠️ حدث خطأ أثناء تنفيذ الحجز",
         "connectionError": "⚠️ خطأ في الاتصال بالخادم",
         "restaurantCapacityValue": "شخص",
+        "restaurantCapacityValue": "السعة",
+"availabilityRemaining": "متبقي <strong>{remaining}</strong> أماكن للحجز",
+"availabilityFull": "لا توجد أماكن متاحة في هذا الوقت",
+"availabilityCheckError": "⚠️ خطأ أثناء التحقق من التوفر",
+"availabilityConnectionError": "⚠️ خطأ في الاتصال بالخادم",
+
         //contact
     "contact-title": "تواصل معنا",
     "contact-intro": "إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.",
@@ -282,6 +288,13 @@ $(document).ready(function() {
         "bookingError": "⚠️ Error processing the booking",
         "connectionError": "⚠️ Connection error",
         "restaurantCapacityValue": "Capacity",
+        "availabilityRemaining": "Remaining <strong>{remaining}</strong> seats available",
+"availabilityFull": "No seats available at this time",
+"availabilityCheckError": "⚠️ Error checking availability",
+"availabilityConnectionError": "⚠️ Server connection error",
+
+
+        
         //contact
     "contact-title": "Contact Us",
     "contact-intro": "If you have any question or suggestion, write to us and we will reply as soon as possible.",

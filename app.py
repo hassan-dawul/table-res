@@ -995,5 +995,41 @@ async def contact_submit(request: Request):
 
     return JSONResponse({"message": response_msg})
 
+@app.get("/availability")
+def check_availability(
+    restaurant_id: int = Query(...),
+    date: str = Query(...),
+    time: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    """
+    يرجع عدد الأشخاص المتبقيين للحجز في مطعم معين بتاريخ ووقت معين.
+    """
+
+    # جلب المطعم
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    # حساب مجموع الأشخاص المحجوزين في نفس التاريخ والوقت
+    booked_people = (
+        db.query(func.sum(Booking.people))
+        .filter(Booking.restaurant_id == restaurant_id)
+        .filter(func.date(Booking.date) == date)
+        .filter(Booking.time == time)
+        .scalar()
+    ) or 0
+
+    remaining = max(restaurant.capacity - booked_people, 0)
+
+    return {
+        "status": "success",
+        "restaurant_id": restaurant_id,
+        "date": date,
+        "time": time,
+        "remaining": remaining
+    }
+
+
 
 FastAPI

@@ -710,17 +710,23 @@ async def create_booking(
     request: Request,
     db: Session = Depends(get_db)
 ):
- 
     print(request.session)
+    
     # الحصول على المستخدم الحالي من الجلسة
     user = get_current_user_from_session(request, db)
     if not user:
-        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول للحجز.")
+        raise HTTPException(
+            status_code=401,
+            detail="يجب تسجيل الدخول للحجز." if booking.lang == 'ar' else "You must log in to book."
+        )
 
     # التحقق من وجود المطعم
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
-        raise HTTPException(status_code=404, detail="المطعم غير موجود.")
+        raise HTTPException(
+            status_code=404,
+            detail="المطعم غير موجود." if booking.lang == 'ar' else "Restaurant not found."
+        )
 
     # تحويل التاريخ والوقت إلى كائنات datetime
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
@@ -728,11 +734,17 @@ async def create_booking(
 
     # منع الحجز في وقت ماضي لنفس اليوم
     if booking_date == datetime.now().date() and booking_time <= datetime.now().time(): 
-        raise HTTPException(status_code=400, detail="لا يمكن الحجز في وقت ماضٍ اليوم." if booking.lang == 'ar' else 'Cannot book in past hour') 
+        raise HTTPException(
+            status_code=400,
+            detail="لا يمكن الحجز في وقت ماضٍ اليوم." if booking.lang == 'ar' else "Cannot book in past hour."
+        )
 
     # التأكد من أن وقت الحجز داخل ساعات عمل المطعم
     if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:
-        raise HTTPException(status_code=400, detail="الوقت خارج ساعات عمل المطعم.")
+        raise HTTPException(
+            status_code=400,
+            detail="الوقت خارج ساعات عمل المطعم." if booking.lang == 'ar' else "Booking time is outside restaurant hours."
+        )
 
     # حساب إجمالي عدد الأشخاص في نفس الوقت للتأكد من السعة
     existing_bookings = db.query(Booking).filter(
@@ -744,7 +756,10 @@ async def create_booking(
 
     total_people = sum(b.people for b in existing_bookings) + booking.people
     if total_people > restaurant.capacity:
-        raise HTTPException(status_code=400, detail="السعة غير كافية لهذا الوقت.")
+        raise HTTPException(
+            status_code=400,
+            detail="السعة غير كافية لهذا الوقت." if booking.lang == 'ar' else "Not enough capacity for this time."
+        )
 
     # إنشاء الحجز وربطه بالمستخدم
     new_booking = Booking(
@@ -1010,6 +1025,20 @@ def check_availability(
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    # تحويل التاريخ والوقت إلى datetime
+    booking_date = datetime.strptime(date, "%Y-%m-%d").date()
+    booking_time = datetime.strptime(time, "%H:%M").time()
+
+    # إذا التاريخ اليوم أو قبل والوقت مضى، لا يظهر شيء
+    if booking_date < datetime.now().date() or (booking_date == datetime.now().date() and booking_time <= datetime.now().time()):
+        return {
+            "status": "success",
+            "restaurant_id": restaurant_id,
+            "date": date,
+            "time": time,
+            "remaining": 0  # أو "" إذا تريد يطلع فاضي
+        }
 
     # حساب مجموع الأشخاص المحجوزين في نفس التاريخ والوقت
     booked_people = (

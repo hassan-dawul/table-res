@@ -17,7 +17,7 @@ DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAM
 engine = create_engine(
     DATABASE_URL,
     connect_args={"charset": "utf8mb4"},
-    echo=True
+    #echo=True
 )
 
 Base = declarative_base()

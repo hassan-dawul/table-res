@@ -14,7 +14,7 @@
 
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                     {% if request.session.get('role') == "admin" %}
-                    <li><a href="/admin/bookings" class="nav-link px-2 text-white"> الحجوزات</a></li>
+                    <li><a href="/admin/bookings" class="nav-link px-2 text-white" id="nav-bookings"> الحجوزات</a></li>
                     {% endif %}
 
                     <li><a href="/" class="nav-link px-2 text-white" id="nav-home">الرئيسية</a></li>

@@ -534,28 +534,47 @@ async def login_user(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
+    
     if not email or not password:
-        return JSONResponse(status_code=400, content={"status": "error", "message": "البريد الإلكتروني وكلمة المرور مطلوبة."})
+        return JSONResponse(
+            status_code=400, 
+            content={"status": "error", "message": "البريد الإلكتروني وكلمة المرور مطلوبة."}
+        )
 
+    # البحث عن المستخدم في قاعدة البيانات
     user = db.query(User).filter(User.email == email).first()
+
+    # التحقق من كلمة المرور
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        # إنشاء توكن جديد
         token = secrets.token_hex(16)
         user.token = token
         user.last_login = datetime.utcnow()
         db.commit()
         db.refresh(user)
-        
-        # بعد التأكد من bcrypt.checkpw
-        request.session['user'] = user.token  # تخزين التوكن في الجلسة
 
-        return JSONResponse(status_code=200, content={
-            "status": "ok",
-            "message": "تم تسجيل الدخول بنجاح",
-            "email": email,
-            "token": token,
-            "last_login": user.last_login.isoformat()
-        })
-    return JSONResponse(status_code=400, content={"status": "error", "message": "بيانات الدخول غير صحيحة"})
+        # ✅ تخزين التوكن + user_id + role في الجلسة
+        request.session['user'] = user.token
+        request.session['user_id'] = user.id
+        request.session['role'] = user.role  # مهم للأدمن
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ok",
+                "message": "تم تسجيل الدخول بنجاح",
+                "email": email,
+                "token": token,
+                "role": user.role,
+                "last_login": user.last_login.isoformat()
+            }
+        )
+
+    # بيانات الدخول غير صحيحة
+    return JSONResponse(
+        status_code=400, 
+        content={"status": "error", "message": "بيانات الدخول غير صحيحة"}
+    )
 
 
 # عرض ملف المستخدم حسب التوكن (Authorization Bearer Token)
@@ -838,33 +857,31 @@ def list_user_bookings(
 
 # عرض جميع الحجوزات - خاص بالأدمن فقط
 @app.get("/api/admin/bookings")
-def list_all_bookings_for_admin(db: Session = Depends(get_db), user: User = Depends(admin_required)):
-    # فقط الأدمن يمكنه الوصول
-    bookings = (
-        db.query(Booking)
-        .options(joinedload(Booking.restaurant), joinedload(Booking.user))
-        .order_by(Booking.date.desc())
-        .all()
-    )
+def get_admin_bookings(
+    lang: str = Query("ar"), 
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_required)
+):
+    bookings = db.query(Booking).all()
+    result = []
 
-    # إعادة كل الحجوزات
-    return {
-        "status": "success",
-        "data": [
-            {
-                "id": b.id,
-                "user_name": b.user.fullname if b.user else "غير معروف",
-                "restaurant_name": b.restaurant.name if b.restaurant else "غير معروف",
-                "date": b.date.isoformat(),
-                "time": b.time.strftime("%H:%M"),
-                "people": b.people,
-                "status": b.status,
-                "created_at": b.created_at.isoformat(),
-                "updated_at": b.updated_at.isoformat(),
-            }
-            for b in bookings
-        ],
-    }
+    for b in bookings:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == b.restaurant_id).first()
+        u = db.query(User).filter(User.id == b.user_id).first()
+
+        restaurant_name = restaurant.name if lang == "ar" else restaurant.name_en
+
+        result.append({
+            "id": b.id,
+            "restaurant_name": restaurant_name,
+            "user_name": u.fullname if u else "غير معروف",
+            "date": b.date.isoformat(),
+            "time": b.time.strftime("%H:%M"),
+            "people": b.people,
+            "status": b.status,
+        })
+
+    return {"status": "success", "data": result}
 
 
 # استعراض حجز معين

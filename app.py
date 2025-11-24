@@ -1,5 +1,6 @@
 import os
 import secrets
+import json
 from datetime import datetime, date as date_type, time as time_type
 from enum import Enum
 from typing import Optional, List
@@ -31,11 +32,17 @@ from emails import send_welcome_email, send_booking_confirmation, send_booking_c
 from fuzzywuzzy import fuzz
 from datetime import date
 from sqlalchemy import func, and_, or_
+import stripe
 
 
 
 
 
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+BASE_URL = os.getenv("BASE_URL")
+
+stripe.api_key = STRIPE_SECRET_KEY
 
 
 
@@ -648,12 +655,6 @@ def get_current_user_from_session(request: Request, db: Session):
 
     return user
 
-
-# حالة الحجز (enum)
-class BookingStatus(str, Enum):
-    confirmed = "confirmed"
-    cancelled = "cancelled"
-
 # موديل لإنشاء حجز جديد
 class BookingCreate(BaseModel):
     lang: str
@@ -720,98 +721,85 @@ class BookingUpdate(BaseModel):
             return v
         except:
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
-
-
-# إنشاء حجز جديد
+        
 @app.post("/bookings", status_code=201)
 async def create_booking(
     booking: BookingCreate,
     request: Request,
     db: Session = Depends(get_db)
 ):
-    print(request.session)
-    
     # الحصول على المستخدم الحالي من الجلسة
     user = get_current_user_from_session(request, db)
     if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="يجب تسجيل الدخول للحجز." if booking.lang == 'ar' else "You must log in to book."
-        )
+        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
 
     # التحقق من وجود المطعم
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
-        raise HTTPException(
-            status_code=404,
-            detail="المطعم غير موجود." if booking.lang == 'ar' else "Restaurant not found."
-        )
+        raise HTTPException(status_code=404, detail="المطعم غير موجود.")
 
-    # تحويل التاريخ والوقت إلى كائنات datetime
+    # تحويل التاريخ والوقت من نصوص
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
     booking_time = datetime.strptime(booking.time, "%H:%M").time()
 
-    # منع الحجز في وقت ماضي لنفس اليوم
-    if booking_date == datetime.now().date() and booking_time <= datetime.now().time(): 
-        raise HTTPException(
-            status_code=400,
-            detail="لا يمكن الحجز في وقت ماضٍ اليوم." if booking.lang == 'ar' else "Cannot book in past hour."
-        )
-
-    # التأكد من أن وقت الحجز داخل ساعات عمل المطعم
-    if booking_time < restaurant.opens_at or booking_time >= restaurant.closes_at:
-        raise HTTPException(
-            status_code=400,
-            detail="الوقت خارج ساعات عمل المطعم." if booking.lang == 'ar' else "Booking time is outside restaurant hours."
-        )
-
-    # حساب إجمالي عدد الأشخاص في نفس الوقت للتأكد من السعة
+    # التحقق من السعة
     existing_bookings = db.query(Booking).filter(
         Booking.restaurant_id == restaurant.id,
         Booking.date == booking_date,
         Booking.time == booking_time,
         Booking.status == BookingStatus.confirmed
     ).all()
-
     total_people = sum(b.people for b in existing_bookings) + booking.people
     if total_people > restaurant.capacity:
-        raise HTTPException(
-            status_code=400,
-            detail="السعة غير كافية لهذا الوقت." if booking.lang == 'ar' else "Not enough capacity for this time."
-        )
+        raise HTTPException(status_code=400, detail="السعة غير كافية لهذا الوقت.")
 
-    # إنشاء الحجز وربطه بالمستخدم
+    # إنشاء الحجز مؤقت
     new_booking = Booking(
         restaurant_id=restaurant.id,
         user_id=user.id,
         date=booking_date,
         time=booking_time,
         people=booking.people,
-        status=BookingStatus.confirmed
+        status=BookingStatus.pending
     )
     db.add(new_booking)
     db.commit()
     db.refresh(new_booking)
 
-    # 🔔 إرسال إيميل تأكيد الحجز
-    send_booking_confirmation(
-    user_name=user.fullname,
-    user_email=user.email,
-    booking_id=new_booking.id,
-    date=new_booking.date.strftime("%Y-%m-%d"),
-    time=new_booking.time.strftime("%H:%M"),
-    service_name=new_booking.restaurant.name  # اسم المطعم
+    # حساب السعر = 10 ريال لكل شخص × 100 سنت
+    amount = booking.people * 10 * 100
+
+    # إنشاء جلسة Stripe Checkout
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price_data': {
+                'currency': 'sar',
+                'product_data': {
+                    'name': f"حجز مطعم {restaurant.name} بتاريخ {booking.date}"
+                },
+                'unit_amount': amount
+            },
+            'quantity': 1
+        }],
+        mode='payment',
+        metadata={"booking_id": new_booking.id},
+        success_url=request.url_for("booking_success"),
+        cancel_url=request.url_for("booking_cancel"),
+        customer_email=user.email
     )
+    print("Session Id: ", session)
 
-
-    # إعادة رد JSON كامل ليتم عرضه في frontend
+    # إعادة JSON مع معلومات الحجز المؤقت والـ session.id
     return {
         "status": "success",
         "booking_id": new_booking.id,
         "date": new_booking.date.strftime("%Y-%m-%d"),
         "time": new_booking.time.strftime("%H:%M"),
-        "people": new_booking.people
+        "people": new_booking.people,
+        "session_url": session.url  # لا تستخدم client_secret هنا للـ redirectToCheckout
     }
+
 # استعراض كل حجوزات المستخدم
 @app.get("/api/bookings")
 def list_user_bookings(
@@ -1076,6 +1064,87 @@ def check_availability(
         "remaining": remaining
     }
 
+# صفحة نجاح الدفع
+@app.get("/booking-success", response_class=HTMLResponse)
+async def booking_success(
+    request: Request,
+    booking_id: int = Query(...),
+    db: Session = Depends(get_db)
+):
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id, Booking.status == BookingStatus.pending
+    ).first()
+
+    if not booking:
+        return HTMLResponse("<h2>الحجز غير موجود أو تم الدفع مسبقاً.</h2>")
+
+    # تحويل الحجز إلى Confirmed
+    booking.status = BookingStatus.confirmed
+    db.commit()
+    db.refresh(booking)
+
+    # إرسال إيميل تأكيد الحجز
+    send_booking_confirmation(
+        user_name=booking.user.fullname,
+        user_email=booking.user.email,
+        booking_id=booking.id,
+        date=booking.date.strftime("%Y-%m-%d"),
+        time=booking.time.strftime("%H:%M"),
+        service_name=booking.restaurant.name
+    )
+
+    return templates.TemplateResponse("booking-success.html", {"request": request, "booking": booking})
+
+
+# صفحة إلغاء الدفع
+@app.get("/booking-cancel", response_class=HTMLResponse)
+def booking_cancel():
+    return HTMLResponse("<h2>تم إلغاء الدفع.</h2>")
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    try:
+        event = json.loads(payload)
+    except json.decoder.JSONDecodeError as e:
+        print('⚠️  Webhook error while parsing basic request.' + str(e))
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError:
+        return {"status": "invalid payload"}
+    except Exception as e:
+        raise Exception("invalid", e)
+
+    print(event)
+    # التعامل مع الدفع الناجح فقط
+    if event['type'] == 'checkout.session.completed':
+        intent = event['data']['object']
+        booking_id = intent['metadata'].get('booking_id')
+        print("booking id found",booking_id )
+        if booking_id:
+            db_booking = db.query(Booking).filter(Booking.id == int(booking_id)).first()
+            if db_booking:
+                db_booking.status = BookingStatus.confirmed
+                db.commit()
+                db.refresh(db_booking)
+
+                # استخدام دالة إرسال إيميل التأكيد الموجودة مسبقًا
+                user = db.query(User).filter(User.id == db_booking.user_id).first()
+                if user:
+                    send_booking_confirmation(
+                        user_name=user.fullname,
+                        user_email=user.email,
+                        booking_id=db_booking.id,
+                        date=db_booking.date.strftime("%Y-%m-%d"),
+                        time=db_booking.time.strftime("%H:%M"),
+                        service_name=db_booking.restaurant.name
+                    )
+
+    return {"status": "success"}
 
 
 FastAPI

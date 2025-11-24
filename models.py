@@ -50,6 +50,7 @@ class Restaurant(Base):
 # -------------------------------
 # تعريف Enum لحالة الحجز
 class BookingStatus(PyEnum):
+    pending = "pending" 
     confirmed = "confirmed"
     cancelled = "cancelled"
 
@@ -64,7 +65,7 @@ class Booking(Base):
     date = Column(DateTime, nullable=False)  # يمكنك استخدام Date فقط إذا أحببت
     time = Column(Time, nullable=False)
     people = Column(Integer, nullable=False)
-    status = Column(Enum(BookingStatus), nullable=False, default=BookingStatus.confirmed)
+    status = Column(Enum(BookingStatus), nullable=False, default=BookingStatus.pending)  # تعديل هنا
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 

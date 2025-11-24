@@ -85,7 +85,7 @@
 <p class="d-none" id="restaurantCapacityLabel">السعة</p>
 <p class="d-none" id="restaurantNotFound">المطعم غير موجود</p>
 <p class="d-none" id="restaurantLoadError">حدث خطأ أثناء تحميل بيانات المطعم</p>
-<p class="d-none" id="bookingSuccess">✅ تم تأكيد الحجز بتاريخ {date} الساعة {time} لعدد {people} أشخاص.</p>
+<p class="d-none" id="bookingSuccess">✅ جاري تحويلك إلى صفحة الدفع...</p>
 <p class="d-none" id="bookingError">⚠️ حدث خطأ أثناء تنفيذ الحجز</p>
 <p class="d-none" id="connectionError">⚠️ خطأ في الاتصال بالخادم</p>
 
@@ -172,6 +172,7 @@
             if (result.status === "success") {
                 message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess').replace('{date}', result.date).replace('{time}', result.time).replace('{people}', result.people)}</div>`;
                 form.reset();
+                window.location = result.session_url
             } else {
                 message.innerHTML = `<div class="alert alert-danger mt-3">${result.detail || translateText('bookingError')}</div>`;
             }

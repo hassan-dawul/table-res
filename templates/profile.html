@@ -41,8 +41,9 @@
 <p class="d-none" id="table-people"></p>
 <p class="d-none" id="table-status"></p>
 <p class="d-none" id="table-actions"></p>
-<p class="d-none" id="status-confirmed"></p>
+<p class="d-none" id="status-pending"></p>
 <p class="d-none" id="status-cancelled"></p>
+<p class="d-none" id=""></p>
 <p class="d-none" id="no-bookings"></p>
 <p class="d-none" id="error-loading-bookings"></p>
 <p class="d-none" id="cancel-confirm"></p>
@@ -81,7 +82,9 @@ async function loadUserBookings() {
 
     const statusTranslation = {
         "confirmed": document.getElementById('status-confirmed')?.textContent || "مؤكد",
-        "cancelled": document.getElementById('status-cancelled')?.textContent || "ملغي"
+        "cancelled": document.getElementById('status-cancelled')?.textContent || "ملغي",
+        "pending": document.getElementById('status-pending')?.textContent || "قيد الانتظار"
+        
     };
 
     try {

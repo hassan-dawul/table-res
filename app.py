@@ -58,6 +58,7 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
 # مفتاح سري لتشفير بيانات الجلسة (غيره لمفتاح قوي)
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 app.add_middleware(SessionMiddleware, secret_key="YOUR_SECRET_KEY")  # ضع مفتاح سري قوي هنا
 
@@ -244,6 +245,18 @@ def profile_page(request: Request):
     if 'user' not in request.session:
         return RedirectResponse("/login")
     return templates.TemplateResponse("profile.html", {"request": request})
+
+@app.get("/pay")
+async def pay(request: Request, s: str = Query(...), db: Session = Depends(get_db)):
+    # booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    # if not booking:
+    #     return HTMLResponse("<h2>❌ الحجز غير موجود</h2>")
+    return templates.TemplateResponse("pay.html", {
+        "request": request,
+        "publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY"),
+        "secret": s
+    })
+
 
 # نقطة اختبار
 @app.get("/ok")
@@ -728,17 +741,17 @@ async def create_booking(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    # الحصول على المستخدم الحالي من الجلسة
+    # الحصول على المستخدم
     user = get_current_user_from_session(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
 
-    # التحقق من وجود المطعم
+    # التحقق من المطعم
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
 
-    # تحويل التاريخ والوقت من نصوص
+    # تحويل التاريخ والوقت
     booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
     booking_time = datetime.strptime(booking.time, "%H:%M").time()
 
@@ -766,10 +779,10 @@ async def create_booking(
     db.commit()
     db.refresh(new_booking)
 
-    # حساب السعر = 10 ريال لكل شخص × 100 سنت
-    amount = booking.people * 10 * 100
+    # حساب السعر
+    amount = booking.people * 10 * 100  # 10 ريال × 100 سنت
 
-    # إنشاء جلسة Stripe Checkout
+    # إنشاء جلسة Stripe
     session = stripe.checkout.Session.create(
         payment_method_types=['card'],
         line_items=[{
@@ -783,21 +796,16 @@ async def create_booking(
             'quantity': 1
         }],
         mode='payment',
+        ui_mode='embedded',
         metadata={"booking_id": new_booking.id},
-        success_url=request.url_for("booking_success"),
-        cancel_url=request.url_for("booking_cancel"),
+        return_url=f"{BASE_URL}/booking-success?session_id={{CHECKOUT_SESSION_ID}}",
         customer_email=user.email
     )
-    print("Session Id: ", session)
 
-    # إعادة JSON مع معلومات الحجز المؤقت والـ session.id
     return {
         "status": "success",
         "booking_id": new_booking.id,
-        "date": new_booking.date.strftime("%Y-%m-%d"),
-        "time": new_booking.time.strftime("%H:%M"),
-        "people": new_booking.people,
-        "session_url": session.url  # لا تستخدم client_secret هنا للـ redirectToCheckout
+        "client_secret": session.client_secret
     }
 
 # استعراض كل حجوزات المستخدم
@@ -1066,34 +1074,26 @@ def check_availability(
 
 # صفحة نجاح الدفع
 @app.get("/booking-success", response_class=HTMLResponse)
-async def booking_success(
+def booking_success(
     request: Request,
-    booking_id: int = Query(...),
+    session_id: str = Query(...),
     db: Session = Depends(get_db)
 ):
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id, Booking.status == BookingStatus.pending
-    ).first()
+    session = stripe.checkout.Session.retrieve(session_id)
+    booking_id = session.metadata.get("booking_id")
 
+    if not booking_id:
+        return HTMLResponse("<h2>الحجز غير موجود!</h2>")
+
+    booking = db.query(Booking).filter(Booking.id == int(booking_id)).first()
     if not booking:
-        return HTMLResponse("<h2>الحجز غير موجود أو تم الدفع مسبقاً.</h2>")
+        return HTMLResponse("<h2>الحجز غير موجود!</h2>")
 
-    # تحويل الحجز إلى Confirmed
-    booking.status = BookingStatus.confirmed
-    db.commit()
-    db.refresh(booking)
 
-    # إرسال إيميل تأكيد الحجز
-    send_booking_confirmation(
-        user_name=booking.user.fullname,
-        user_email=booking.user.email,
-        booking_id=booking.id,
-        date=booking.date.strftime("%Y-%m-%d"),
-        time=booking.time.strftime("%H:%M"),
-        service_name=booking.restaurant.name
+    return templates.TemplateResponse(
+        "booking-success.html",
+        {"request": request, "booking": booking}
     )
-
-    return templates.TemplateResponse("booking-success.html", {"request": request, "booking": booking})
 
 
 # صفحة إلغاء الدفع
@@ -1145,6 +1145,25 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     )
 
     return {"status": "success"}
+
+
+@app.post("/create-checkout-session")
+async def create_checkout_session():
+    session = stripe.checkout.Session.create(
+        line_items=[{
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {'name': 'طاولتك'},
+                'unit_amount': 2000,
+            },
+            'quantity': 1,
+        }],
+        mode='payment',
+        ui_mode='embedded',
+        return_url='http://127.0.0.1:5000/booking-success?session_id={CHECKOUT_SESSION_ID}',
+    )
+    return JSONResponse({"clientSecret": session.client_secret})
+
 
 
 FastAPI

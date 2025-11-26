@@ -170,12 +170,18 @@
             message.innerHTML = "";
 
             if (result.status === "success") {
-                message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess').replace('{date}', result.date).replace('{time}', result.time).replace('{people}', result.people)}</div>`;
-                form.reset();
-                window.location = result.session_url
-            } else {
-                message.innerHTML = `<div class="alert alert-danger mt-3">${result.detail || translateText('bookingError')}</div>`;
-            }
+    message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess')}</div>`;
+    form.reset();
+
+    // تحقق من وجود booking_id
+    if (result.booking_id) {
+        // تحويل للصفحة pay مع booking_id
+        window.location = `/pay?s=${result.client_secret}`;
+    } else {
+        message.innerHTML = "<div class='alert alert-danger mt-3'>❌ معرف الحجز غير موجود!</div>";
+    }
+}
+
         } catch (err) {
             console.error(err);
             message.innerHTML = `<div class="alert alert-danger mt-3">${translateText('connectionError')}</div>`;

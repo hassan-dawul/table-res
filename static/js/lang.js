@@ -149,6 +149,27 @@ $(document).ready(function() {
         "namePlaceholder": "الاسم",
     "subjectPlaceholder": "موضوع الرسالة",
     "messagePlaceholder": "اكتب رسالتك هنا...",
+       //booking-success
+    "payment-success-title": "✅ تم الدفع بنجاح!",
+    "payment-success-subtitle": "شكراً لك على حجز طاولتك.",
+    "invoice-title": "فاتورة الحجز",
+    "loading-text": "جارٍ تحميل بيانات الحجز...",
+    "profile-btn": "العودة للملف الشخصي",
+    "new-booking-btn": "حجز جديد",
+           "user-name": "اسم المستخدم:",
+        "user-email": "البريد الإلكتروني:",
+        "restaurant-name": "المطعم:",
+        "booking-date": "التاريخ:",
+        "booking-time": "الوقت:",
+        "booking-people": "عدد الأشخاص:",
+        "amount-paid": "المبلغ المدفوع:",
+        "loading": "جارٍ تحميل بيانات الحجز...",
+        "no-booking": "لا توجد بيانات للحجز.",
+        "error-loading": "فشل تحميل بيانات الحجز.",
+        "cannot-define": "لا يمكن تحديد الحجز.",
+        "currency": "ريال",
+
+
 
   
 
@@ -311,6 +332,28 @@ $(document).ready(function() {
         "namePlaceholder": "Name",
     "subjectPlaceholder": "Subject of the message",
     "messagePlaceholder": "Write your message here...",
+    //booking-success
+    "payment-success-title": "✅ Payment Successful!",
+    "payment-success-subtitle": "Thank you for booking your table.",
+    "invoice-title": "Booking Invoice",
+    "loading-text": "Loading booking details...",
+    "profile-btn": "Back to Profile",
+    "new-booking-btn": "New Booking",
+            "user-name": "User Name:",
+        "user-email": "Email:",
+        "restaurant-name": "Restaurant:",
+        "booking-date": "Date:",
+        "booking-time": "Time:",
+        "booking-people": "Number of People:",
+        "amount-paid": "Amount Paid:",
+        "loading": "Loading booking details...",
+        "no-booking": "No booking data.",
+        "error-loading": "Failed to load booking details.",
+        "cannot-define": "Cannot determine booking.",
+        "currency": "SAR",
+
+
+
 
 
 

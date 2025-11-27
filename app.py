@@ -1089,6 +1089,20 @@ def booking_success(
     if not booking:
         return HTMLResponse("<h2>الحجز غير موجود!</h2>")
 
+    if booking.status != BookingStatus.confirmed:
+        booking.status = BookingStatus.confirmed
+        db.commit()
+        db.refresh(booking)
+
+        # إرسال إيميل تأكيد الحجز
+        send_booking_confirmation(
+            user_name=booking.user.fullname,
+            user_email=booking.user.email,
+            booking_id=booking.id,
+            date=booking.date.strftime("%Y-%m-%d"),
+            time=booking.time.strftime("%H:%M"),
+            service_name=booking.restaurant.name
+        )
 
     return templates.TemplateResponse(
         "booking-success.html",

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}<span id="profile-title">حجز طاولة</span>{% endblock %}
+{% block content %}
+
+<main class="container mt-5">
+    <h2><span id="profile-welcome">مرحبا بك،</span> <span id="fullname"></span></h2>
+    <p><span id="profile-email">البريد الإلكتروني:</span> <span id="email"></span></p>
+    <p><span id="profile-last-login">آخر تسجيل دخول:</span> <span id="last_login"></span></p>
+    <button id="logoutBtn" class="btn btn-danger mb-4"><span id="profile-logout">تسجيل الخروج</span></button>
+
+    <hr>
+
+    <h3 id="bookings-title">حجوزاتي القادمة:</h3>
+    <table class="table table-striped" id="bookingsTable">
+        <thead>
+            <tr>
+                <th id="table-id" scope="col">#</th>
+                <th id="table-restaurant" scope="col">المطعم</th>
+                <th id="table-date" scope="col">التاريخ</th>
+                <th id="table-time" scope="col">الوقت</th>
+                <th id="table-people" scope="col">عدد الأشخاص</th>
+                <th id="table-status" scope="col">الحالة</th>
+                <th id="table-actions" scope="col">إجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="bookingsList">
+            <!-- سيتم ملء هذا القسم بالحجوزات عبر JavaScript -->
+        </tbody>
+    </table>
+
+<!-- 🔹 عناصر الترجمة المخفية -->
+<p class="d-none" id="profile-welcome"></p>
+<p class="d-none" id="profile-email"></p>
+<p class="d-none" id="profile-last-login"></p>
+<p class="d-none" id="profile-logout"></p>
+<p class="d-none" id="bookings-title"></p>
+<p class="d-none" id="table-id"></p>
+<p class="d-none" id="table-restaurant"></p>
+<p class="d-none" id="table-date"></p>
+<p class="d-none" id="table-time"></p>
+<p class="d-none" id="table-people"></p>
+<p class="d-none" id="table-status"></p>
+<p class="d-none" id="table-actions"></p>
+<p class="d-none" id="status-pending"></p>
+<p class="d-none" id="status-cancelled"></p>
+<p class="d-none" id=""></p>
+<p class="d-none" id="no-bookings"></p>
+<p class="d-none" id="error-loading-bookings"></p>
+<p class="d-none" id="cancel-confirm"></p>
+<p class="d-none" id="cancel-success"></p>
+<p class="d-none" id="cancel-failed"></p>
+<p class="d-none" id="logout-error"></p>
+<p class="d-none" id="cancel-btn"></p>
+<p class="d-none" id="pay-btn">ادفع الآن</p>
+
+
+    
+</main>
+
+<script>
+async function loadUserInfo() {
+    try {
+        const res = await fetch('/user', { credentials: 'include' });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            document.getElementById('fullname').textContent = data.data.fullname;
+            document.getElementById('email').textContent = data.data.email;
+            document.getElementById('last_login').textContent = data.data.last_login;
+
+            loadUserBookings();
+        } else {
+            window.location.href = '/login';
+        }
+    } catch (err) {
+        console.error("خطأ في تحميل بيانات المستخدم:", err);
+        window.location.href = '/login';
+    }
+}
+
+async function loadUserBookings() {
+    const list = document.getElementById('bookingsList');
+    list.innerHTML = '';
+
+    const statusTranslation = {
+        "confirmed": document.getElementById('status-confirmed')?.textContent || "مؤكد",
+        "cancelled": document.getElementById('status-cancelled')?.textContent || "ملغي",
+        "pending": document.getElementById('status-pending')?.textContent || "قيد الانتظار"
+    };
+
+    try {
+        const lang = localStorage.getItem('site-lang') || 'ar';
+        const res = await fetch(`/api/bookings?lang=${lang}`, { credentials: 'include' });
+        const result = await res.json();
+        const bookings = result.data;
+
+        if (bookings.length > 0) {
+            bookings.forEach((b, index) => {
+                let dateOnly = b.date.split('T')[0];
+
+                // زر الإجراء
+                let actionBtn = '';
+if (b.status === 'pending') {
+
+    // زر الدفع – النص يجي من عنصر الترجمة المخفي
+    actionBtn = `<button class="btn btn-primary btn-sm" onclick="window.location='/pay?s=${b.client_secret}'">
+                    ${document.getElementById('pay-btn')?.textContent || 'ادفع الآن'}
+                 </button>`;
+
+} else if (b.status !== 'cancelled') {
+
+    // زر الإلغاء كما هو
+    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">
+                    ${document.getElementById('cancel-btn')?.textContent || 'إلغاء'}
+                 </button>`;
+}
+
+
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <th scope="row">${index + 1}</th>
+                    <td>${b.restaurant_name}</td>
+                    <td>${dateOnly}</td>
+                    <td>${b.time}</td>
+                    <td>${b.people}</td>
+                    <td>${statusTranslation[b.status] || b.status}</td>
+                    <td>${actionBtn}</td>
+                `;
+                list.appendChild(tr);
+            });
+        } else {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="7" class="text-center">${document.getElementById('no-bookings')?.textContent || 'لا توجد حجوزات حالياً.'}</td>`;
+            list.appendChild(tr);
+        }
+    } catch (err) {
+        console.error("خطأ في تحميل الحجوزات:", err);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" class="text-center text-danger">${document.getElementById('error-loading-bookings')?.textContent || 'حدث خطأ في تحميل الحجوزات.'}</td>`;
+        list.appendChild(tr);
+    }
+}
+
+async function cancelBooking(id, btn) {
+    if (!confirm(document.getElementById('cancel-confirm')?.textContent || 'هل أنت متأكد من الإلغاء؟')) return;
+
+    try {
+        const res = await fetch(`/api/bookings/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            const row = btn.closest('tr');
+            row.querySelector('td:nth-child(6)').textContent = document.getElementById('status-cancelled')?.textContent || "ملغي";
+            btn.remove();
+            alert(document.getElementById('cancel-success')?.textContent || "✅ تم الإلغاء بنجاح");
+        } else {
+            alert(`⚠️ ${data.detail || document.getElementById('cancel-failed')?.textContent || 'حدث خطأ أثناء الإلغاء'}`);
+        }
+    } catch (error) {
+        alert(document.getElementById('logout-error')?.textContent || "⚠️ فشل الاتصال بالخادم");
+        console.error(error);
+    }
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+        await fetch('/logout', { credentials: 'include' });
+        window.location.href = '/login';
+    } catch (err) {
+        console.error(document.getElementById('logout-error')?.textContent || "خطأ أثناء تسجيل الخروج:", err);
+    }
+});
+
+loadUserInfo();
+</script>
+
+{% endblock %}

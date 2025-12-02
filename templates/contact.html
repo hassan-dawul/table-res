@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}تواصل معنا{% endblock %}
+
+{% block content %}
+<main class="container py-5" style="max-width: 600px;">
+    <h1 id="contact-title" class="text-center mb-4">تواصل معنا</h1>
+    <p id="contact-intro" class="text-center mb-4">إذا عندك سؤال أو اقتراح، اكتب لنا وسنرد بأقرب وقت.</p>
+
+    <form id="contactForm">
+        <div class="mb-3">
+            <label for="name" id="label-name" class="form-label">الاسم</label>
+            <input type="text" class="form-control" id="name" placeholder="الاسم" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="email" id="label-email" class="form-label">البريد الإلكتروني</label>
+            <input type="email" class="form-control" id="email" placeholder="you@gmail.com" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="subject" id="label-subject" class="form-label">الموضوع</label>
+            <input type="text" class="form-control" id="subject" placeholder="موضوع الرسالة" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="message" id="label-message" class="form-label">الرسالة</label>
+            <textarea class="form-control" id="message" rows="5" placeholder="اكتب رسالتك هنا..." required></textarea>
+        </div>
+
+        <button type="submit" id="send-btn" class="btn btn-primary w-100 py-2">إرسال</button>
+        <div id="formMessage" class="mt-3 text-center text-danger"></div>
+    </form>
+</main>
+
+<!-- عناصر الـ placeholder المخفية -->
+<p class="d-none" id="namePlaceholder">الاسم</p>
+<p class="d-none" id="subjectPlaceholder">موضوع الرسالة</p>
+<p class="d-none" id="messagePlaceholder">اكتب رسالتك هنا...</p>
+
+
+<script>
+    $(document).ready(function() {
+
+    // الاسم
+    var nameInput = document.getElementById("name");
+    const namePlaceholder = document.getElementById("namePlaceholder")?.textContent || "الاسم";
+    nameInput.placeholder = namePlaceholder;
+
+    // الموضوع
+    var subjectInput = document.getElementById("subject");
+    const subjectPlaceholder = document.getElementById("subjectPlaceholder")?.textContent || "موضوع الرسالة";
+    subjectInput.placeholder = subjectPlaceholder;
+
+    // الرسالة
+    var messageInput = document.getElementById("message");
+    const messagePlaceholder = document.getElementById("messagePlaceholder")?.textContent || "اكتب رسالتك هنا...";
+    messageInput.placeholder = messagePlaceholder;
+
+    // 🔹 التعامل مع الفورم
+    const contactForm = document.getElementById('contactForm');
+    const formMessage = document.getElementById('formMessage');
+
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+
+    const lang = localStorage.getItem('site-lang') || 'ar';
+
+
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            subject: document.getElementById('subject').value,
+            message: document.getElementById('message').value,
+            lang: lang  // مهم جداً
+
+        };
+
+        try {
+            const response = await fetch('/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if(response.ok) {
+                formMessage.classList.remove('text-danger');
+                formMessage.classList.add('text-success');
+                formMessage.innerText = data.message || 'تم إرسال الرسالة بنجاح!';
+                contactForm.reset();
+            } else {
+                formMessage.classList.remove('text-success');
+                formMessage.classList.add('text-danger');
+                formMessage.innerText = data.message || 'حدث خطأ أثناء الإرسال';
+            }
+
+        } catch (err) {
+            formMessage.classList.remove('text-success');
+            formMessage.classList.add('text-danger');
+            formMessage.innerText = 'خطأ في الاتصال بالخادم';
+        }
+    });
+});
+</script>
+{% endblock %}

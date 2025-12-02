@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}إتمام الدفع{% endblock %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <h2 id="payment-title">إتمام الدفع</h2>
+<p id="payment-subtitle">سيتم معالجة الدفع بشكل آمن لإتمام حجزك.</p>
+
+<p class="d-none" id="payment-title-text">إتمام الدفع</p>
+<p class="d-none" id="payment-subtitle-text">سيتم معالجة الدفع بشكل آمن لإتمام حجزك.</p>
+
+    <div id="checkout"></div>
+    <div id="payment-message" class="mt-3"></div>
+</div>
+
+<script src="https://js.stripe.com/clover/stripe.js"></script>
+<script>
+    const stripe = Stripe("{{ publishable_key }}");
+
+    async function initializeCheckout() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const booking_id = urlParams.get('booking_id');
+
+            // if (!booking_id) {
+            //     document.getElementById('payment-message').textContent = "❌ لا يوجد معرف للحجز!";
+            //     return;
+            // }
+
+            // جلب client_secret من السيرفر
+            const res = await fetch(`/create-checkout-session?booking_id=${booking_id}`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+
+
+            // if (!data.clientSecret) {
+            //     document.getElementById('payment-message').textContent = "❌ حدث خطأ أثناء تحميل جلسة الدفع!";
+            //     return;
+            // }
+
+            const clientSecret = "{{ secret }}";
+
+            // تهيئة embedded checkout
+            const checkout = await stripe.initEmbeddedCheckout({
+                fetchClientSecret: () => clientSecret
+            });
+
+            // تثبيت عنصر الدفع في الصفحة
+            checkout.mount('#checkout');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('payment-message').textContent = "⚠️ حدث خطأ أثناء تحميل الدفع.";
+        }
+    }
+
+    initializeCheckout();
+</script>
+{% endblock %}

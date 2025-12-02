@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}<span id="bookingTitle">حجز طاولة</span>{% endblock %}
+{% block content %}
+
+<style>
+    body {
+        background: #f5f5f5;
+        font-family: Arial, sans-serif;
+        padding: 20px;
+    }
+
+    .booking-container {
+        max-width: 1000px;
+        margin: 50px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .restaurant-info {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .divider {
+        border-left: 2px solid #ddd;
+        height: 100%;
+    }
+</style>
+
+<div class="booking-container">
+    <div class="row">
+        <!-- قسم المطعم -->
+        <div class="col-md-5">
+            <div id="restaurantInfo" class="restaurant-info text-center">
+                <p id="loadingRestaurant">جاري تحميل بيانات المطعم...</p>
+            </div>
+        </div>
+
+        <!-- فاصل -->
+        <div class="col-md-1 d-none d-md-flex justify-content-center">
+            <div class="divider"></div>
+        </div>
+
+        <!-- قسم الحجز -->
+        <div class="col-md-6">
+            <h2 class="text-center mb-4" id="bookingSectionTitle">حجز طاولة</h2>
+
+            <form id="bookingForm">
+                <div class="mb-3">
+                    <label for="date" class="form-label" id="dateLabel">التاريخ:</label>
+                    <input type="date" class="form-control" id="date" name="date" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="time" class="form-label" id="timeLabel">الوقت:</label>
+                    <select id="time" name="time" class="form-select" required style="height: 45px;">
+                        <option value="" id="timePlaceholder">اختر الساعة</option>
+                    </select>
+                    <div id="availabilityInfo" class="mt-2 text-dark fw-bold"></div>
+
+                </div>
+
+                <div class="mb-3">
+                    <label for="people" class="form-label" id="peopleLabel">عدد الأشخاص:</label>
+                    <input type="number" class="form-control" id="people" name="people" min="1" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" id="submitBtn">احجز الآن</button>
+            </form>
+
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<!-- عناصر الترجمة المخفية -->
+<p class="d-none" id="restaurantNameLabel">اسم المطعم</p>
+<p class="d-none" id="restaurantCuisineLabel">نوع المطبخ</p>
+<p class="d-none" id="restaurantAreaLabel">المنطقة</p>
+<p class="d-none" id="restaurantHoursLabel">ساعات العمل</p>
+<p class="d-none" id="restaurantCapacityLabel">السعة</p>
+<p class="d-none" id="restaurantNotFound">المطعم غير موجود</p>
+<p class="d-none" id="restaurantLoadError">حدث خطأ أثناء تحميل بيانات المطعم</p>
+<p class="d-none" id="bookingSuccess">✅ جاري تحويلك إلى صفحة الدفع...</p>
+<p class="d-none" id="bookingError">⚠️ حدث خطأ أثناء تنفيذ الحجز</p>
+<p class="d-none" id="connectionError">⚠️ خطأ في الاتصال بالخادم</p>
+
+<script>
+    const select = document.getElementById('time');
+
+    for (let h = 10; h <= 23; h++) {
+        const period = h < 12 ? 'AM' : 'PM';
+        const hour12 = h % 12 === 0 ? 12 : h % 12;
+
+        const option = document.createElement('option');
+        option.value = h.toString().padStart(2, '0') + ':00';
+        option.textContent = `${hour12} ${period}`;
+        select.appendChild(option);
+    }
+</script>
+
+<script>
+    const form = document.getElementById('bookingForm');
+    const message = document.getElementById('message');
+    const infoDiv = document.getElementById('restaurantInfo');
+
+    const restaurantId = "{{ restaurant_id }}";
+    const restaurantIdNum = parseInt(restaurantId);
+    const lang = localStorage.getItem('site-lang') || 'ar';
+
+    function translateText(id) {
+        const el = document.getElementById(id);
+        return el ? el.textContent : '';
+    }
+
+    async function loadRestaurant(id) {
+        infoDiv.innerHTML = `<p>${translateText('loadingRestaurant')}</p>`;
+        try {
+            const lang = localStorage.getItem('site-lang') || 'ar';
+            const res = await fetch(`/restaurants/${id}?lang=${lang}`);
+            const data = await res.json();
+            if (data.status === "success") {
+                const r = data.data;
+                infoDiv.innerHTML = `
+                    <h3>${r.name}</h3>
+                    <p class="text-muted">${r.cuisine} • ${r.area}</p>
+                    <p>${translateText('restaurantHoursLabel')}: ${r.opens_at} - ${r.closes_at}</p>
+                    <p id="restaurantCapacityValue">
+    ${translateText('restaurantCapacityLabel')}: ${r.capacity} ${lang === 'ar' ? 'شخص' : 'guests'}
+</p>
+
+                `;
+            } else {
+                infoDiv.innerHTML = `<div class="alert alert-danger">${translateText('restaurantNotFound')}</div>`;
+            }
+        } catch (err) {
+            console.error(err);
+            infoDiv.innerHTML = `<div class="alert alert-danger">${translateText('restaurantLoadError')}</div>`;
+        }
+    }
+
+    loadRestaurant(restaurantIdNum);
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        document.getElementById('submitBtn').disabled = true
+
+        const formData = new FormData(form);
+        const data = {
+            date: formData.get('date'),
+            time: formData.get('time'),
+            people: parseInt(formData.get('people')),
+            restaurant_id: restaurantIdNum,
+            lang: lang
+        };
+
+        try {
+            const res = await fetch('/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                credentials: 'include'
+            });
+
+            const result = await res.json();
+            message.innerHTML = "";
+
+            if (result.status === "success") {
+    message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess')}</div>`;
+    form.reset();
+
+    // تحقق من وجود booking_id
+    if (result.booking_id) {
+        // تحويل للصفحة pay مع booking_id
+        window.location = `/pay?s=${result.client_secret}`;
+    } else {
+        message.innerHTML = "<div class='alert alert-danger mt-3'>❌ معرف الحجز غير موجود!</div>";
+    }
+}
+
+        } catch (err) {
+            console.error(err);
+            message.innerHTML = `<div class="alert alert-danger mt-3">${translateText('connectionError')}</div>`;
+        } finally {
+            document.getElementById('submitBtn').disabled = false
+        }
+    });
+const dateInput = document.getElementById('date');
+const timeInput = document.getElementById('time');
+const availabilityDiv = document.getElementById('availabilityInfo');
+
+async function checkAvailability() {
+    const date = dateInput.value;
+    const time = timeInput.value;
+
+    // إذا التاريخ أو الوقت فارغ، نمسح النص
+    if (!date || !time) {
+        availabilityDiv.textContent = "";
+        return;
+    }
+
+    try {
+        const res = await fetch(`/availability?restaurant_id=${restaurantIdNum}&date=${date}&time=${time}`);
+        const data = await res.json();
+
+        availabilityDiv.style.color = "black"; // النص دايم أسود
+
+        if (data.status === "success") {
+            const remaining = data.remaining;
+            if (remaining > 0) {
+                availabilityDiv.innerHTML = translateText('availabilityRemaining').replace('{remaining}', remaining);
+            } else {
+                availabilityDiv.innerHTML = translateText('availabilityFull');
+            }
+        } else {
+            availabilityDiv.innerHTML = translateText('availabilityCheckError');
+        }
+
+    } catch (err) {
+        console.error(err);
+        availabilityDiv.style.color = "black";
+        availabilityDiv.innerHTML = translateText('availabilityConnectionError');
+    }
+}
+
+// تفعيل الفحص عند تغيير التاريخ أو الوقت
+dateInput.addEventListener('change', checkAvailability);
+timeInput.addEventListener('change', checkAvailability);
+
+
+</script>
+<!-- RESTAURANTS SECTION -->
+<section class="brand-bg py-5" id="restaurants-section">
+  <div class="container">
+    <h2 id="restaurants-title" class="mb-4 text-center">المطاعم المتاحة</h2>
+    <div id="restaurants-container" class="row g-4"></div>
+    <div class="text-center mt-4">
+        <a id="more-restaurants-btn" href="/restaurants_page" class="btn btn-primary btn-lg">المزيد من المطاعم</a>
+    </div>
+  </div>
+</section>
+
+<script>
+  $(document).ready(function() {
+    const lang = localStorage.getItem('site-lang')
+    const endpoint = '/restaurants?lang=' + lang;
+    $.ajax({
+      url: endpoint,
+      method: 'GET',
+      dataType: 'json',
+      success: function(data) {
+        $('#restaurants-container').empty();
+        $.each(data.data, function(index, r) {
+          const cardHtml = `
+          <div class="col-md-4">
+            <div class="card shadow-sm rounded">
+              <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+                <small>${r.cuisine}</small>
+              </div>
+              <div class="card-body">
+                                         <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area }</p>
+                         <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
+                        <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
+                        <p><strong>${document.getElementById('todayBookingsLabel')?.textContent || 'عدد الحجز اليوم'}:</strong> ${r.today_bookings}</p>
+
+                        </div>
+                                <div class="card-footer text-center">
+                          <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">
+                ${document.getElementById('bookNow')?.textContent || 'احجز الآن'}
+
+              </div>
+            </div>
+          </div>`;
+          $('#restaurants-container').append(cardHtml);
+        });
+      },
+      error: function(xhr, status, error) {
+        $('#restaurants-container').html(`
+          <div class="alert alert-danger text-center">
+            <p>❌ حدث خطأ أثناء تحميل المطاعم.</p>
+            <p><strong>الحالة:</strong> ${status}</p>
+            <p><strong>الرسالة:</strong> ${error}</p>
+          </div>
+        `);
+      }
+    });
+
+  });
+</script>
+
+<!-- 🔹 عناصر الترجمة المخفية للمطاعم -->
+<p class="d-none" id="location"></p>
+<p class="d-none" id="hours"></p>
+<p class="d-none" id="capacity"></p>
+<p class="d-none" id="bookNow"></p>
+<p class="d-none" id="guests"></p>
+<p class="d-none" id="todayBookingsLabel"></p>
+<p class="d-none" id="availabilityRemaining">متبقي <strong>{remaining}</strong> أماكن للحجز</p>
+<p class="d-none" id="availabilityFull">لا توجد أماكن متاحة في هذا الوقت</p>
+<p class="d-none" id="availabilityCheckError">⚠️ خطأ أثناء التحقق من التوفر</p>
+<p class="d-none" id="availabilityConnectionError">⚠️ خطأ في الاتصال بالخادم</p>
+
+
+
+{% endblock %}

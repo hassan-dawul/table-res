@@ -33,6 +33,9 @@ from fuzzywuzzy import fuzz
 from datetime import date
 from sqlalchemy import func, and_, or_
 import stripe
+from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 
 
@@ -81,10 +84,20 @@ templates = Jinja2Templates(directory="templates")
 app.state.limiter = limiter
 
 @app.get("/booking/{restaurant_id}", response_class=HTMLResponse)
-def booking_page(request: Request, restaurant_id: int):
+def booking_page(request: Request, restaurant_id: int, db: Session = Depends(get_db)):
+    # جلب المطعم من قاعدة البيانات
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if not restaurant:
+        return HTMLResponse("<h2>المطعم غير موجود!</h2>")
+
+    # تمرير اللغة من الجلسة
+    lang = request.session.get("lang", "ar")
+
     return templates.TemplateResponse(
         "booking.html",
-        {"request": request, "restaurant_id": restaurant_id}
+        
+                {"request": request, "restaurant_id": restaurant_id}
+
     )
 
 @app.get("/admin/bookings", response_class=HTMLResponse)
@@ -802,6 +815,11 @@ async def create_booking(
         customer_email=user.email
     )
 
+    new_booking.client_secret = session.client_secret
+    db.commit()
+    db.refresh(new_booking)
+
+
     return {
         "status": "success",
         "booking_id": new_booking.id,
@@ -834,10 +852,9 @@ def list_user_bookings(
         if not b.restaurant:
             restaurant_name = "غير معروف"
         else:
-            # ✅ اختيار الاسم حسب اللغة
             restaurant_name = b.restaurant.name_en if lang == "en" else b.restaurant.name
 
-        data.append({
+        booking_data = {
             "id": b.id,
             "restaurant_name": restaurant_name,
             "date": b.date.isoformat(),
@@ -846,9 +863,16 @@ def list_user_bookings(
             "status": b.status,
             "created_at": b.created_at.isoformat(),
             "updated_at": b.updated_at.isoformat()
-        })
+        }
+
+        # ✅ إذا الحجز Pending، أضف client_secret لتمكين زر "ادفع الآن"
+        if b.status == BookingStatus.pending and hasattr(b, "client_secret"):
+            booking_data["client_secret"] = b.client_secret
+
+        data.append(booking_data)
 
     return {"status": "success", "data": data}
+
 
 
 # عرض جميع الحجوزات - خاص بالأدمن فقط
@@ -1105,9 +1129,10 @@ def booking_success(
         )
 
     return templates.TemplateResponse(
-        "booking-success.html",
-        {"request": request, "booking": booking}
-    )
+    "booking-success.html",
+    {"request": request, "booking": booking, "lang": request.session.get("lang", "ar")}
+)
+
 
 
 # صفحة إلغاء الدفع
@@ -1122,31 +1147,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     sig_header = request.headers.get("stripe-signature")
     endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
+    # التحقق من صحة payload وتوقيع Stripe
     try:
-        event = json.loads(payload)
-    except json.decoder.JSONDecodeError as e:
-        print('⚠️  Webhook error while parsing basic request.' + str(e))
-    try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except ValueError:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        # payload غير صالح
+        print(f"⚠️ Invalid payload: {e}")
         return {"status": "invalid payload"}
+    except stripe.error.SignatureVerificationError as e:
+        # التوقيع غير صالح
+        print(f"⚠️ Invalid signature: {e}")
+        return {"status": "invalid signature"}
     except Exception as e:
-        raise Exception("invalid", e)
+        print(f"⚠️ Webhook error: {e}")
+        return {"status": "error"}
 
-    print(event)
     # التعامل مع الدفع الناجح فقط
     if event['type'] == 'checkout.session.completed':
-        intent = event['data']['object']
-        booking_id = intent['metadata'].get('booking_id')
-        print("booking id found",booking_id )
+        session_obj = event['data']['object']
+        booking_id = session_obj['metadata'].get('booking_id')
+
         if booking_id:
             db_booking = db.query(Booking).filter(Booking.id == int(booking_id)).first()
             if db_booking:
+                # تحديث حالة الحجز
                 db_booking.status = BookingStatus.confirmed
                 db.commit()
                 db.refresh(db_booking)
 
-                # استخدام دالة إرسال إيميل التأكيد الموجودة مسبقًا
+                # إرسال بريد التأكيد
                 user = db.query(User).filter(User.id == db_booking.user_id).first()
                 if user:
                     send_booking_confirmation(
@@ -1177,6 +1208,16 @@ async def create_checkout_session():
         return_url='http://127.0.0.1:5000/booking-success?session_id={CHECKOUT_SESSION_ID}',
     )
     return JSONResponse({"clientSecret": session.client_secret})
+
+@app.delete("/api/bookings/cleanup")
+def cleanup_expired_bookings(db: Session = Depends(get_db)):
+    expiration = datetime.utcnow() - timedelta(minutes=2)
+    deleted_count = db.query(Booking).filter(
+        Booking.status == BookingStatus.pending,
+        Booking.created_at < expiration
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"deleted": deleted_count}
 
 
 

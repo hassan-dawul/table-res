@@ -26,7 +26,9 @@
 
             <div class="row mb-2">
                 <div class="col-sm-4 fw-bold" id="restaurant-name">المطعم:</div>
-                <div class="col-sm-8">{{ booking.restaurant.name }}</div>
+                <div class="col-sm-8 name-ar" style="display: none;">{{ booking.restaurant.name }}</div>
+                <div class="col-sm-8 name-en" style="display: none;">{{ booking.restaurant.name_en }}</div>
+
             </div>
 
             <div class="row mb-2">
@@ -65,5 +67,19 @@
 <p class="d-none" id="error-loading">فشل تحميل بيانات الحجز.</p>
 <p class="d-none" id="cannot-define">لا يمكن تحديد الحجز.</p>
 <p class="d-none" id="table-actions"></p>
+
+<script>
+    $(document).ready(function() {
+        const lang = localStorage.getItem('site-lang') || 'ar'; // استرجاع اللغة من localStorage
+
+        if(lang === 'ar') {
+            $(".name-ar").show();
+            $(".name-en").hide();
+        } else {
+            $(".name-ar").hide();
+            $(".name-en").show();
+        }
+    });
+</script>
 
 {% endblock %}

@@ -60,6 +60,8 @@ $(document).ready(function() {
       "cancel-failed": "⚠️ حدث خطأ أثناء الإلغاء",
       "logout-error": "⚠️ خطأ أثناء تسجيل الخروج",
       "cancel-btn": "إلغاء",
+      "pay-btn": "ادفع الآن",
+
           // HEADER
     "nav-bookings": "الحجوزات",
     "nav-home": "الرئيسية",
@@ -150,7 +152,7 @@ $(document).ready(function() {
     "subjectPlaceholder": "موضوع الرسالة",
     "messagePlaceholder": "اكتب رسالتك هنا...",
        //booking-success
-    "payment-success-title": "✅ تم الدفع بنجاح!",
+    "payment-success-title": "✅ تم الدفع بنجاح",
     "payment-success-subtitle": "شكراً لك على حجز طاولتك.",
     "invoice-title": "فاتورة الحجز",
     "loading-text": "جارٍ تحميل بيانات الحجز...",
@@ -168,6 +170,15 @@ $(document).ready(function() {
         "error-loading": "فشل تحميل بيانات الحجز.",
         "cannot-define": "لا يمكن تحديد الحجز.",
         "currency": "ريال",
+        "payment-title": "إتمام الدفع",
+        "payment-subtitle": "سيتم معالجة الدفع بشكل آمن لإتمام حجزك.",
+
+
+
+
+
+
+
 
 
 
@@ -239,6 +250,8 @@ $(document).ready(function() {
       "cancel-failed": "⚠️ Error occurred while cancelling",
       "logout-error": "⚠️ Error during logout",
       "cancel-btn": "cancellation",
+      "pay-btn": "Pay Now",
+
           // HEADER
     "nav-bookings": "Bookings",
     "nav-home": "Home",
@@ -333,7 +346,7 @@ $(document).ready(function() {
     "subjectPlaceholder": "Subject of the message",
     "messagePlaceholder": "Write your message here...",
     //booking-success
-    "payment-success-title": "✅ Payment Successful!",
+    "payment-success-title": "✅ Payment Successful",
     "payment-success-subtitle": "Thank you for booking your table.",
     "invoice-title": "Booking Invoice",
     "loading-text": "Loading booking details...",
@@ -351,6 +364,9 @@ $(document).ready(function() {
         "error-loading": "Failed to load booking details.",
         "cannot-define": "Cannot determine booking.",
         "currency": "SAR",
+        "payment-title": "Complete Payment",
+        "payment-subtitle": "Your booking will be securely processed.",
+
 
 
 

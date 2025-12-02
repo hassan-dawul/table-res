@@ -4,8 +4,11 @@
 
 {% block content %}
 <div class="container mt-5 text-center">
-    <h2>إتمام الدفع</h2>
-    <p>سيتم معالجة الدفع بشكل آمن لإتمام حجزك.</p>
+    <h2 id="payment-title">إتمام الدفع</h2>
+<p id="payment-subtitle">سيتم معالجة الدفع بشكل آمن لإتمام حجزك.</p>
+
+<p class="d-none" id="payment-title-text">إتمام الدفع</p>
+<p class="d-none" id="payment-subtitle-text">سيتم معالجة الدفع بشكل آمن لإتمام حجزك.</p>
 
     <div id="checkout"></div>
     <div id="payment-message" class="mt-3"></div>

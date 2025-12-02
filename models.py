@@ -68,10 +68,15 @@ class Booking(Base):
     status = Column(Enum(BookingStatus), nullable=False, default=BookingStatus.pending)  # تعديل هنا
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    client_secret = Column(String, nullable=True)
 
     # الربط بالعلاقات
     user = relationship("User", back_populates="bookings")
-    restaurant = relationship("Restaurant", back_populates="bookings")
+    restaurant = relationship(
+        "Restaurant",
+        back_populates="bookings",
+        lazy="joined"
+    )
 
  # إعداد نموذج الرسائل في قاعدة 
 

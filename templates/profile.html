@@ -51,6 +51,8 @@
 <p class="d-none" id="cancel-failed"></p>
 <p class="d-none" id="logout-error"></p>
 <p class="d-none" id="cancel-btn"></p>
+<p class="d-none" id="pay-btn">ادفع الآن</p>
+
 
     
 </main>
@@ -84,23 +86,36 @@ async function loadUserBookings() {
         "confirmed": document.getElementById('status-confirmed')?.textContent || "مؤكد",
         "cancelled": document.getElementById('status-cancelled')?.textContent || "ملغي",
         "pending": document.getElementById('status-pending')?.textContent || "قيد الانتظار"
-        
     };
 
     try {
         const lang = localStorage.getItem('site-lang') || 'ar';
-const res = await fetch(`/api/bookings?lang=${lang}`, { credentials: 'include' });
-
+        const res = await fetch(`/api/bookings?lang=${lang}`, { credentials: 'include' });
         const result = await res.json();
         const bookings = result.data;
 
         if (bookings.length > 0) {
             bookings.forEach((b, index) => {
                 let dateOnly = b.date.split('T')[0];
+
+                // زر الإجراء
                 let actionBtn = '';
-                if (b.status !== 'cancelled') {
-                    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">${document.getElementById('cancel-btn')?.textContent || 'إلغاء'}</button>`;
-                }
+if (b.status === 'pending') {
+
+    // زر الدفع – النص يجي من عنصر الترجمة المخفي
+    actionBtn = `<button class="btn btn-primary btn-sm" onclick="window.location='/pay?s=${b.client_secret}'">
+                    ${document.getElementById('pay-btn')?.textContent || 'ادفع الآن'}
+                 </button>`;
+
+} else if (b.status !== 'cancelled') {
+
+    // زر الإلغاء كما هو
+    actionBtn = `<button class="btn btn-outline-danger btn-sm fw-bold" onclick="cancelBooking(${b.id}, this)">
+                    ${document.getElementById('cancel-btn')?.textContent || 'إلغاء'}
+                 </button>`;
+}
+
+
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `

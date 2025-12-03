@@ -1209,7 +1209,15 @@ async def create_checkout_session():
     )
     return JSONResponse({"clientSecret": session.client_secret})
 
-
+@app.delete("/api/bookings/cleanup")
+def cleanup_expired_bookings(db: Session = Depends(get_db)):
+    expiration = datetime.utcnow() - timedelta(minutes=2)
+    deleted_count = db.query(Booking).filter(
+        Booking.status == BookingStatus.pending,
+        Booking.created_at < expiration
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"deleted": deleted_count}
 
 
 

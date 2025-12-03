@@ -843,7 +843,7 @@ def list_user_bookings(
         db.query(Booking)
         .options(joinedload(Booking.restaurant))
         .filter(Booking.user_id == user.id)
-        .order_by(Booking.date.desc())
+        .order_by(Booking.created_at.desc())
         .all()
     )
 

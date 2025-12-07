@@ -710,14 +710,43 @@ class BookingCreate(BaseModel):
         return v
 
     @validator('time')
-    def validate_time(cls, v):
+    def validate_time(cls, v, values):
         if v is None:
             return v
+
+        # تحقق من صيغة الوقت
         try:
-            datetime.strptime(v, "%H:%M").time()
-            return v
+            booking_time = datetime.strptime(v, "%H:%M").time()
         except ValueError:
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
+
+        # جلب التاريخ من نفس الموديل
+        booking_date_str = values.get("date")
+        lang = values.get("lang", "ar")
+
+        # إذا المستخدم كتب وقت فقط بدون تاريخ → نرجّع بدون تحقق إضافي
+        if not booking_date_str:
+            return v
+
+        # تحويل التاريخ
+        try:
+            booking_date = datetime.strptime(booking_date_str, "%Y-%m-%d").date()
+        except:
+            return v  # التاريخ سيُرفض لاحقاً في validator التاريخ
+
+        # الوقت الحالي
+        now = datetime.utcnow()
+
+        # التحقق من أنه نفس اليوم
+        if booking_date == now.date():
+            if booking_time < now.time():
+                raise HTTPException(
+                    status_code=400,
+                    detail="لا يمكن الحجز لوقت مضى اليوم." if lang == "ar" else "Cannot book a past time today"
+                )
+
+        return v
+
 
 
 # موديل لتحديث الحجز (جزئي)

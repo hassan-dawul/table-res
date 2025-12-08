@@ -111,6 +111,16 @@ def contact_page(request: Request):
     return templates.TemplateResponse("contact.html", {"request": request})
 
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request})
+
+@app.get("/how", response_class=HTMLResponse)
+async def how_page(request: Request):
+    return templates.TemplateResponse("how.html", {"request": request})
+
+
+
 
 
 # إضافة middleware الخاص بـ slowapi
@@ -1248,6 +1258,14 @@ def cleanup_expired_bookings(db: Session = Depends(get_db)):
     db.commit()
     return {"deleted": deleted_count}
 
+@app.get("/cities")
+def get_cities(lang: str = Query("ar"), db: Session = Depends(get_db)):
+    if lang == "ar":
+        cities = db.query(Restaurant.area).distinct().all()
+    else:
+        cities = db.query(Restaurant.area_en).distinct().all()
+    city_list = [c[0] for c in cities if c[0]]
+    return {"status": "success", "data": city_list}
 
 
 FastAPI

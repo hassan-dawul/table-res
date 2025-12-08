@@ -103,14 +103,9 @@
 <!-- TAGS / CATEGORIES -->
 <section class="cta-section text-center py-5 bg-light">
   <div class="container">
-      <h2 id="tags-title" class="mb-4">تعرّف على خياراتك</h2>
-    <div class="chips">
-      <button class="btn btn-primary" id="tag-riyadh">الرياض</button>
-      <button class="btn btn-primary" id="tag-jeddah">جدة</button>
-      <button class="btn btn-primary" id="tag-dammam">الدمام</button>
-      <button class="btn btn-primary" id="tag-italian">إيطالي</button>
-      <button class="btn btn-primary" id="tag-indian">هندي</button>
-      <button class="btn btn-primary" id="tag-arabic">شرقي</button>
+    <h2 id="tags-title" class="mb-4">تعرّف على خياراتك</h2>
+    <div class="chips" id="city-chips">
+      <!-- الأزرار ستُضاف هنا ديناميكيًا -->
     </div>
   </div>
 </section>
@@ -174,6 +169,30 @@
     });
 
   });
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const chipsContainer = document.getElementById("city-chips");
+    const lang = localStorage.getItem('site-lang') || 'ar';
+
+    try {
+        const response = await fetch("/cities?lang=" + lang);
+        const result = await response.json();
+
+        chipsContainer.innerHTML = ""; // مسح الأزرار القديمة
+        (result.data || []).forEach(city => {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-primary";
+            btn.textContent = city;
+            chipsContainer.appendChild(btn);
+        });
+
+    } catch (error) {
+        console.error("خطأ في جلب المدن:", error);
+        chipsContainer.innerHTML = "<p>تعذر تحميل المدن.</p>";
+    }
+});
+
+
 </script>
 
 <!-- 🔹 عناصر الترجمة المخفية للمطاعم -->
@@ -183,6 +202,8 @@
 <p class="d-none" id="bookNow"></p>
 <p class="d-none" id="guests"></p>
 <p class="d-none" id="todayBookingsLabel"></p>
+<div class="row" id="restaurants-container"></div>
+
 
 
 

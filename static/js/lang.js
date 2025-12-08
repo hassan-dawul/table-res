@@ -174,6 +174,31 @@ $(document).ready(function() {
         "payment-subtitle": "سيتم معالجة الدفع بشكل آمن لإتمام حجزك.",
 
 
+        // عنّا
+        "about-title": "عنّا",
+        "about-title-h2": "عنّا",
+        "about-card-1-title": "سرعة وفعالية",
+        "about-text-1": "نحن منصة متخصصة في تسهيل حجز الطاولات في المطاعم المفضلة لديك بطريقة سريعة وآمنة.",
+        "about-card-2-title": "تجربة المستخدم",
+        "about-text-2": "هدفنا هو توفير تجربة سلسة للمستخدمين مع أفضل المطاعم وخدمة عملاء ممتازة.",
+        "about-card-3-title": "أهمية الوقت",
+        "about-text-3": "نؤمن بأهمية الوقت وتجربة المستخدم لذلك صممنا نظامنا ليكون بسيط وفعال.",
+        "about-card-4-title": "تحديث مستمر",
+        "about-text-4": "نعمل على تحديث خدماتنا باستمرار لتلبية احتياجات جميع عملائنا.",
+
+        // كيف نعمل
+        "how-title": "كيف نعمل",
+        "how-title-h2": "كيف نعمل",
+        "how-step-1-title": "اختيار المطعم",
+        "how-step-1-text": "اختر مطعمك المفضل من قائمة المطاعم المتوفرة.",
+        "how-step-2-title": "حجز الطاولة",
+        "how-step-2-text": "قم بحجز الطاولة المناسبة حسب التاريخ والوقت.",
+        "how-step-3-title": "الدفع والاستمتاع",
+        "how-step-3-text": "أتمم الدفع واستمتع بتجربة رائعة في المطعم.",
+        "how-step-4-title": "خدمة متميزة",
+        "how-step-4-text": "نضمن لك تجربة ممتازة وخدمة عملاء سريعة وفعالة.",
+
+
 
 
 
@@ -366,6 +391,30 @@ $(document).ready(function() {
         "currency": "SAR",
         "payment-title": "Complete Payment",
         "payment-subtitle": "Your booking will be securely processed.",
+
+        // About Us
+        "about-title": "About Us",
+        "about-title-h2": "About Us",
+        "about-card-1-title": "Speed & Efficiency",
+        "about-text-1": "We are a platform specialized in making table reservations at your favorite restaurants fast and secure.",
+        "about-card-2-title": "User Experience",
+        "about-text-2": "Our goal is to provide a seamless experience for users with the best restaurants and excellent customer service.",
+        "about-card-3-title": "Time Matters",
+        "about-text-3": "We value time and user experience, so we designed our system to be simple and efficient.",
+        "about-card-4-title": "Continuous Update",
+        "about-text-4": "We continuously update our services to meet the needs of all our customers.",
+
+        // How We Work
+        "how-title": "How We Work",
+        "how-title-h2": "How We Work",
+        "how-step-1-title": "Choose Restaurant",
+        "how-step-1-text": "Select your favorite restaurant from our available list.",
+        "how-step-2-title": "Reserve Table",
+        "how-step-2-text": "Book a table according to your preferred date and time.",
+        "how-step-3-title": "Pay & Enjoy",
+        "how-step-3-text": "Complete payment and enjoy a great experience at the restaurant.",
+        "how-step-4-title": "Excellent Service",
+        "how-step-4-text": "We guarantee an excellent experience and fast, efficient customer service."
 
 
 

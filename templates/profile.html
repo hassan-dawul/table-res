@@ -41,9 +41,8 @@
     <p class="d-none" id="no-bookings"></p>
     <p class="d-none" id="error-loading-bookings"></p>
     <p class="d-none" id="logout-error"></p>
-    
     <p class="d-none" id="pagination-prev">السابق</p>
-    <p class="d-none" id="pagination-next">التالي</p>
+<p class="d-none" id="pagination-next">التالي</p>
 
 </main>
 <style>
@@ -193,46 +192,61 @@ async function cancelBooking(id, btn) {
         console.error(error);
     }
 }
-
 function renderPagination(totalBookings) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
-
     const totalPages = Math.ceil(totalBookings / bookingsPerPage);
+
+    if (totalPages <= 1) return;
+
+    // ترجمة الأزرار
+    const prevText = document.getElementById('pagination-prev')?.textContent || "Previous";
+    const nextText = document.getElementById('pagination-next')?.textContent || "Next";
 
     // زر Previous
     const prevLi = document.createElement('li');
     prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
-    prevLi.innerHTML = `<a class="page-link" href="#">${document.getElementById('pagination-prev')?.textContent || 'Previous'}</a>`;
-    prevLi.addEventListener('click', (e) => {
+    const prevLink = document.createElement('a');
+    prevLink.className = 'page-link';
+    prevLink.href = "#";
+    prevLink.textContent = prevText;
+    prevLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (currentPage > 1) loadUserBookings(currentPage - 1);
+        if (currentPage > 1) displayBookings(currentPage - 1);
     });
+    prevLi.appendChild(prevLink);
     pagination.appendChild(prevLi);
 
-    // أرقام الصفحات
+    // أزرار الصفحات
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
         li.className = 'page-item' + (i === currentPage ? ' active' : '');
-        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-        li.addEventListener('click', (e) => {
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = "#";
+        a.textContent = i;
+        a.addEventListener('click', (e) => {
             e.preventDefault();
-            loadUserBookings(i);
+            displayBookings(i);
         });
+        li.appendChild(a);
         pagination.appendChild(li);
     }
 
     // زر Next
     const nextLi = document.createElement('li');
     nextLi.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
-    nextLi.innerHTML = `<a class="page-link" href="#">${document.getElementById('pagination-next')?.textContent || 'Next'}</a>`;
-    nextLi.addEventListener('click', (e) => {
+    const nextLink = document.createElement('a');
+    nextLink.className = 'page-link';
+    nextLink.href = "#";
+    nextLink.textContent = nextText;
+    nextLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (currentPage < totalPages) loadUserBookings(currentPage + 1);
+        if (currentPage < totalPages) displayBookings(currentPage + 1);
     });
+    nextLi.appendChild(nextLink);
     pagination.appendChild(nextLi);
 }
-
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     try {
@@ -244,6 +258,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 loadUserInfo();
+
 </script>
 
 {% endblock %}

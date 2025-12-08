@@ -55,3 +55,31 @@
 
         
 
+/* أزرار الصفحات - الخلفية بيضاء والنص أسود */
+.pagination .page-item .page-link {
+    background-color: white;
+    color: black;
+    border: 1px solid #dee2e6; /* نفس إطار البوتستراب */
+}
+
+/* الصفحة النشطة - خلفية سوداء ونص أبيض */
+.pagination .page-item.active .page-link {
+    background-color: black;
+    color: white;
+    border-color: black;
+}
+
+/* عند المرور على أي زر - تأثير hover */
+.pagination .page-item .page-link:hover {
+    background-color: #f0f0f0;
+    color: black;
+}
+
+/* أزرار معطلة Next/Previous */
+.pagination .page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    pointer-events: none;
+}
+
+

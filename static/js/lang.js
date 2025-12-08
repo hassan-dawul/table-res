@@ -197,6 +197,8 @@ $(document).ready(function() {
         "how-step-3-text": "أتمم الدفع واستمتع بتجربة رائعة في المطعم.",
         "how-step-4-title": "خدمة متميزة",
         "how-step-4-text": "نضمن لك تجربة ممتازة وخدمة عملاء سريعة وفعالة.",
+      "pagination-prev": "السابق",
+    "pagination-next": "التالي",
 
 
 
@@ -414,7 +416,9 @@ $(document).ready(function() {
         "how-step-3-title": "Pay & Enjoy",
         "how-step-3-text": "Complete payment and enjoy a great experience at the restaurant.",
         "how-step-4-title": "Excellent Service",
-        "how-step-4-text": "We guarantee an excellent experience and fast, efficient customer service."
+        "how-step-4-text": "We guarantee an excellent experience and fast, efficient customer service.",
+        "pagination-prev": "Previous",
+    "pagination-next": "Next",
 
 
 

@@ -124,7 +124,7 @@
 <script>
   $(document).ready(function() {
     const lang = localStorage.getItem('site-lang')
-    const endpoint = '/restaurants?lang=' + lang;
+    const endpoint = '/restaurants?limit=3&lang=' + lang;
     $.ajax({
       url: endpoint,
       method: 'GET',

@@ -788,17 +788,26 @@ class BookingUpdate(BaseModel):
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
         
 @app.post("/bookings", status_code=201)
-async def create_booking(
-    booking: BookingCreate,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # الحصول على المستخدم
-    user = get_current_user_from_session(request, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
+async def create_booking(booking: BookingCreate, request: Request, db: Session = Depends(get_db)):
+    lang = booking.lang if hasattr(booking, "lang") else "ar"  # جلب لغة المستخدم من البيانات المرسلة
 
-    # التحقق من المطعم
+    # مثال: منع الحجز بتاريخ ماضي
+    booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
+    if booking_date < datetime.utcnow().date():
+        raise HTTPException(
+            status_code=400,
+            detail="لا يمكن الحجز في تاريخ ماضٍ." if lang == 'ar' else "Cannot book a past date"
+        )
+
+    # مثال: التحقق من تسجيل الدخول
+    try:
+        user = get_current_user_from_session(request, db)
+    except HTTPException:
+        raise HTTPException(
+            status_code=401,
+            detail="يجب تسجيل الدخول لإتمام الحجز." if lang == 'ar' else "You must log in to complete the booking."
+        )
+    # ===== التحقق من المطعم =====
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
@@ -857,7 +866,6 @@ async def create_booking(
     new_booking.client_secret = session.client_secret
     db.commit()
     db.refresh(new_booking)
-
 
     return {
         "status": "success",

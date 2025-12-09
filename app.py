@@ -306,7 +306,7 @@ def get_restaurants(
     area: Optional[str] = Query(None),
     cuisine: Optional[str] = Query(None),
     lang: str = Query("ar"),
-    limit: Optional[int] = Query(3),
+    limit: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
     today = date.today()

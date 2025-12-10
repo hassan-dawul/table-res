@@ -925,17 +925,20 @@ def list_user_bookings(
 # عرض جميع الحجوزات - خاص بالأدمن فقط
 @app.get("/api/admin/bookings")
 def get_admin_bookings(
+    page: int = Query(1, ge=1),        # رقم الصفحة
+    per_page: int = Query(40, ge=1),   # عدد الحجوزات لكل صفحة
     lang: str = Query("ar"), 
     db: Session = Depends(get_db),
     user: User = Depends(admin_required)
 ):
-    bookings = db.query(Booking).all()
-    result = []
+    query = db.query(Booking).order_by(Booking.created_at.desc())
+    total = query.count()
+    bookings = query.offset((page - 1) * per_page).limit(per_page).all()
 
+    result = []
     for b in bookings:
         restaurant = db.query(Restaurant).filter(Restaurant.id == b.restaurant_id).first()
         u = db.query(User).filter(User.id == b.user_id).first()
-
         restaurant_name = restaurant.name if lang == "ar" else restaurant.name_en
 
         result.append({
@@ -948,8 +951,14 @@ def get_admin_bookings(
             "status": b.status,
         })
 
-    return {"status": "success", "data": result}
-
+    return {
+        "status": "success",
+        "data": result,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page
+    }
 
 # استعراض حجز معين
 @app.get("/bookings/{booking_id}")

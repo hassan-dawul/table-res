@@ -111,6 +111,16 @@ def contact_page(request: Request):
     return templates.TemplateResponse("contact.html", {"request": request})
 
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request})
+
+@app.get("/how", response_class=HTMLResponse)
+async def how_page(request: Request):
+    return templates.TemplateResponse("how.html", {"request": request})
+
+
+
 
 
 # إضافة middleware الخاص بـ slowapi
@@ -296,7 +306,7 @@ def get_restaurants(
     area: Optional[str] = Query(None),
     cuisine: Optional[str] = Query(None),
     lang: str = Query("ar"),
-    limit: Optional[int] = Query(3),
+    limit: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ):
     today = date.today()
@@ -710,14 +720,43 @@ class BookingCreate(BaseModel):
         return v
 
     @validator('time')
-    def validate_time(cls, v):
+    def validate_time(cls, v, values):
         if v is None:
             return v
+
+        # تحقق من صيغة الوقت
         try:
-            datetime.strptime(v, "%H:%M").time()
-            return v
+            booking_time = datetime.strptime(v, "%H:%M").time()
         except ValueError:
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
+
+        # جلب التاريخ من نفس الموديل
+        booking_date_str = values.get("date")
+        lang = values.get("lang", "ar")
+
+        # إذا المستخدم كتب وقت فقط بدون تاريخ → نرجّع بدون تحقق إضافي
+        if not booking_date_str:
+            return v
+
+        # تحويل التاريخ
+        try:
+            booking_date = datetime.strptime(booking_date_str, "%Y-%m-%d").date()
+        except:
+            return v  # التاريخ سيُرفض لاحقاً في validator التاريخ
+
+        # الوقت الحالي
+        now = datetime.utcnow()
+
+        # التحقق من أنه نفس اليوم
+        if booking_date == now.date():
+            if booking_time < now.time():
+                raise HTTPException(
+                    status_code=400,
+                    detail="لا يمكن الحجز لوقت مضى اليوم." if lang == "ar" else "Cannot book a past time today"
+                )
+
+        return v
+
 
 
 # موديل لتحديث الحجز (جزئي)
@@ -749,17 +788,26 @@ class BookingUpdate(BaseModel):
             raise ValueError("صيغة الوقت يجب أن تكون HH:MM.")
         
 @app.post("/bookings", status_code=201)
-async def create_booking(
-    booking: BookingCreate,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    # الحصول على المستخدم
-    user = get_current_user_from_session(request, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="يجب تسجيل الدخول.")
+async def create_booking(booking: BookingCreate, request: Request, db: Session = Depends(get_db)):
+    lang = booking.lang if hasattr(booking, "lang") else "ar"  # جلب لغة المستخدم من البيانات المرسلة
 
-    # التحقق من المطعم
+    # مثال: منع الحجز بتاريخ ماضي
+    booking_date = datetime.strptime(booking.date, "%Y-%m-%d").date()
+    if booking_date < datetime.utcnow().date():
+        raise HTTPException(
+            status_code=400,
+            detail="لا يمكن الحجز في تاريخ ماضٍ." if lang == 'ar' else "Cannot book a past date"
+        )
+
+    # مثال: التحقق من تسجيل الدخول
+    try:
+        user = get_current_user_from_session(request, db)
+    except HTTPException:
+        raise HTTPException(
+            status_code=401,
+            detail="يجب تسجيل الدخول لإتمام الحجز." if lang == 'ar' else "You must log in to complete the booking."
+        )
+    # ===== التحقق من المطعم =====
     restaurant = db.query(Restaurant).filter(Restaurant.id == booking.restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="المطعم غير موجود.")
@@ -819,7 +867,6 @@ async def create_booking(
     db.commit()
     db.refresh(new_booking)
 
-
     return {
         "status": "success",
         "booking_id": new_booking.id,
@@ -878,17 +925,20 @@ def list_user_bookings(
 # عرض جميع الحجوزات - خاص بالأدمن فقط
 @app.get("/api/admin/bookings")
 def get_admin_bookings(
+    page: int = Query(1, ge=1),        # رقم الصفحة
+    per_page: int = Query(40, ge=1),   # عدد الحجوزات لكل صفحة
     lang: str = Query("ar"), 
     db: Session = Depends(get_db),
     user: User = Depends(admin_required)
 ):
-    bookings = db.query(Booking).all()
-    result = []
+    query = db.query(Booking).order_by(Booking.created_at.desc())
+    total = query.count()
+    bookings = query.offset((page - 1) * per_page).limit(per_page).all()
 
+    result = []
     for b in bookings:
         restaurant = db.query(Restaurant).filter(Restaurant.id == b.restaurant_id).first()
         u = db.query(User).filter(User.id == b.user_id).first()
-
         restaurant_name = restaurant.name if lang == "ar" else restaurant.name_en
 
         result.append({
@@ -901,8 +951,14 @@ def get_admin_bookings(
             "status": b.status,
         })
 
-    return {"status": "success", "data": result}
-
+    return {
+        "status": "success",
+        "data": result,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page
+    }
 
 # استعراض حجز معين
 @app.get("/bookings/{booking_id}")
@@ -1219,6 +1275,14 @@ def cleanup_expired_bookings(db: Session = Depends(get_db)):
     db.commit()
     return {"deleted": deleted_count}
 
+@app.get("/cities")
+def get_cities(lang: str = Query("ar"), db: Session = Depends(get_db)):
+    if lang == "ar":
+        cities = db.query(Restaurant.area).distinct().all()
+    else:
+        cities = db.query(Restaurant.area_en).distinct().all()
+    city_list = [c[0] for c in cities if c[0]]
+    return {"status": "success", "data": city_list}
 
 
 FastAPI

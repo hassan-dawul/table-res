@@ -2,7 +2,7 @@ fastapi
 uvicorn
 bcrypt
 jwt
-dotenv
+python-dotenv
 itsdangerous
 sqlalchemy
 slowapi
@@ -12,3 +12,4 @@ stripe
 apscheduler
 jinja2
 pydantic[email]
+langdetect

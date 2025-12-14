@@ -1,7 +1,7 @@
 import os
 import secrets
 import json
-from datetime import datetime, date as date_type, time as time_type
+from datetime import datetime, date as date_type, time as time_type, timedelta
 from enum import Enum
 from typing import Optional, List
 
@@ -27,14 +27,13 @@ from pydantic import BaseModel, validator, EmailStr, conint
 
 from db import SessionLocal, engine, Base, get_db
 from models import User, Restaurant, Booking, BookingStatus, ContactMessage
-from fastapi import Request, Depends
 from emails import send_welcome_email, send_booking_confirmation, send_booking_cancellation
-from fuzzywuzzy import fuzz
+from fuzzywuzzy import fuzz, process
 from datetime import date
 from sqlalchemy import func, and_, or_
 import stripe
-from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
+from langdetect import detect, DetectorFactory
 
 
 
@@ -52,6 +51,9 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 # تحميل المتغيرات من ملف .env
 load_dotenv()
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+
 
 # إنشاء Limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -139,6 +141,29 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 # هنا بعدين تضيف باقي الراوتات والدوال مثل تسجيل الدخول، الحجز، الخ...
 
+translations = {
+    "ar": {
+        "open-now": "المطعم مفتوح الآن",
+        "closed-now": "المطعم مغلق الآن",
+        "capacity-info": "السعة: {capacity} شخص",
+        "most-booked": "الأكثر حجزًا",
+        "book-now-btn": "احجز الآن",
+            "chat-title": "الشات",
+    "ask-restaurant": "اسأل عن مطعم...",   
+    "send-btn": "إرسال",                    
+    "user-prefix": "أنت",                
+    "bot-error": "بوت: حدث خطأ، حاول مرة أخرى.",
+
+    },
+    "en": {
+        "open-now": "Restaurant is open now",
+        "closed-now": "Restaurant is closed now",
+        "capacity-info": "Capacity: {capacity} people",
+        "most-booked": "Most booked",
+        "book-now-btn": "Book Now",
+        
+    }
+}
 
 
 
@@ -279,6 +304,16 @@ async def pay(request: Request, s: str = Query(...), db: Session = Depends(get_d
         "publishable_key": os.getenv("STRIPE_PUBLISHABLE_KEY"),
         "secret": s
     })
+
+class ChatMessage(BaseModel):
+    message: str
+    lang: str = "ar"  # ar أو en
+
+
+@app.get("/chat")
+def chat_page(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request})
+
 
 
 # نقطة اختبار
@@ -1284,5 +1319,76 @@ def get_cities(lang: str = Query("ar"), db: Session = Depends(get_db)):
     city_list = [c[0] for c in cities if c[0]]
     return {"status": "success", "data": city_list}
 
+
+# دالة كشف اللغة
+def detect_lang_simple(text):
+    for c in text:
+        if '\u0600' <= c <= '\u06FF':  # أي حرف عربي
+            return "ar"
+    return "en"
+
+@app.post("/chatbot")
+async def chatbot(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    message = data.get("message", "").strip()
+
+    if not message:
+        return {"reply": "اكتب سؤالك من فضلك"}
+
+    # كشف اللغة تلقائيًا
+    lang = detect_lang_simple(message)
+
+    today = date.today()
+    now = datetime.now().time()
+
+    restaurants = db.query(Restaurant).all()
+    results = []
+
+    for r in restaurants:
+        # اختيار الحقول حسب اللغة المكتشفة
+        target_name = r.name_en if lang == "en" else r.name
+        target_cuisine = r.cuisine_en if lang == "en" else r.cuisine
+        target_area = r.area_en if lang == "en" else r.area
+
+        if fuzz.partial_ratio(message.lower(), target_name.lower()) > 60 or \
+           fuzz.partial_ratio(message.lower(), target_cuisine.lower()) > 60 or \
+           fuzz.partial_ratio(message.lower(), target_area.lower()) > 60:
+            results.append(r)
+
+    if not results:
+        return {"reply": "لم أجد مطاعم تناسب سؤالك" if lang=="ar" else "No matching restaurants found"}
+
+    # ترتيب حسب أكثر حجوزات اليوم
+    results = sorted(results, key=lambda r: db.query(Booking).filter(
+        Booking.restaurant_id == r.id,
+        Booking.date == today
+    ).count(), reverse=True)
+
+    # إنشاء HTML للرد
+    reply_html = ""
+    for r in results:
+        bookings_today = db.query(Booking).filter(
+            Booking.restaurant_id == r.id,
+            Booking.date == today
+        ).count()
+
+        # تحديث الحقول حسب اللغة لكل مطعم
+        target_name = r.name_en if lang == "en" else r.name
+        target_cuisine = r.cuisine_en if lang == "en" else r.cuisine
+        target_area = r.area_en if lang == "en" else r.area
+
+        status = translations[lang]['open-now'] if r.opens_at <= now <= r.closes_at else translations[lang]['closed-now']
+
+        reply_html += f"""
+        <div style='border:1px solid #ccc; padding:8px; margin-bottom:5px; border-radius:6px; background:#f9f9f9;'>
+            <strong>{target_name}</strong> - {target_area} - {target_cuisine}<br>
+            {status}<br>
+            {translations[lang]['capacity-info'].replace('{capacity}', str(r.capacity))}<br>
+            {translations[lang]['most-booked']}: {bookings_today}<br>
+            <a href='/booking/{r.id}'>{translations[lang]['book-now-btn']}</a>
+        </div>
+        """
+
+    return {"reply": reply_html}
 
 FastAPI

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}شات{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:center; padding-top:50px;">
+    <div id="chatbox" class="shadow p-3 mb-5 bg-body rounded" style="width:400px;">
+        <h4 id="chat-title" style="text-align:center; margin-bottom:15px;"></h4>
+        <div id="messages" style="height:300px; overflow-y:auto; border:1px solid #eee; padding:5px; margin-bottom:10px; background-color:#fafafa; border-radius:4px;"></div>
+        
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="userInput" placeholder="" style="flex:1; padding:8px; border-radius:4px; border:1px solid #ccc;">
+        </div>
+        
+        <button id="sendBtn" class="btn btn-primary mt-3" style="width:100%; font-weight:bold;"></button>
+    </div>
+</div>
+
+<!-- 🔹 عناصر الترجمة المخفية -->
+<p class="d-none" id="chat-title-text"></p>
+<p class="d-none" id="ask-restaurant"></p>
+<p class="d-none" id="send-btn"></p>
+<p class="d-none" id="user-prefix"></p>
+<p class="d-none" id="bot-error"></p>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // تحديث النصوص حسب اللغة (نفس نظام المطاعم)
+    document.getElementById('chat-title').innerText =
+        document.getElementById('chat-title-text')?.textContent || 'الشات';
+
+    document.getElementById('userInput').placeholder =
+        document.getElementById('ask-restaurant')?.textContent || 'اسأل عن مطعم...';
+
+    document.getElementById('sendBtn').innerText =
+        document.getElementById('send-btn')?.textContent || 'إرسال';
+
+    const messagesDiv = document.getElementById('messages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    async function sendMessage() {
+        const input = userInput.value.trim();
+        if (!input) return;
+
+        const userPrefix =
+            document.getElementById('user-prefix')?.textContent || 'أنت';
+
+        const botError =
+            document.getElementById('bot-error')?.textContent || 'حدث خطأ';
+
+        messagesDiv.innerHTML +=
+            `<div class="message user text-end mb-2">${userPrefix}: ${input}</div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        try {
+            const res = await fetch("/chatbot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: input })
+            });
+
+            const data = await res.json();
+
+            if (data.redirect) {
+                window.location.href = `/booking/${data.redirect}`;
+                return;
+            }
+
+            messagesDiv.innerHTML +=
+                `<div class="message bot text-start mb-2">${data.reply}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            userInput.value = "";
+            userInput.focus();
+
+        } catch (err) {
+            messagesDiv.innerHTML +=
+                `<div class="message bot text-start mb-2">${botError}</div>`;
+            console.error(err);
+        }
+    }
+
+    userInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") sendMessage();
+    });
+
+    sendBtn.addEventListener("click", sendMessage);
+
+});
+</script>
+{% endblock %}

@@ -199,6 +199,20 @@ $(document).ready(function() {
         "how-step-4-text": "نضمن لك تجربة ممتازة وخدمة عملاء سريعة وفعالة.",
       "pagination-prev": "السابق",
     "pagination-next": "التالي",
+        //chat
+    "nav-chat": "الشات",
+   
+"chat-title": "الشات",
+        "ask-restaurant": "اسأل عن مطعم...",
+        "send-btn": "إرسال",
+        "user-prefix": "أنت",
+        "bot-error": "بوت: حدث خطأ، حاول مرة أخرى",
+        "open-now": "مفتوح الآن",
+        "closed-now": "مغلق الآن",
+        "capacity-info": "السعة: {capacity} ضيوف",
+        "most-booked": "الأكثر حجزًا اليوم",
+        "book-now-btn": "احجز الآن",
+
 
 
 
@@ -419,7 +433,23 @@ $(document).ready(function() {
         "how-step-4-text": "We guarantee an excellent experience and fast, efficient customer service.",
         "pagination-prev": "Previous",
     "pagination-next": "Next",
+          //chat
+    "nav-chat": "Chat",
+        "chat-title": "Chat",
+        "ask-restaurant": "Ask about a restaurant...",
+        "send-btn": "Send",
+        "user-prefix": "You",
+        "bot-error": "Bot: An error occurred, try again",
+        "open-now": "Open now",
+        "closed-now": "Closed now",
+        "capacity-info": "Capacity: {capacity} guests",
+        "most-booked": "Most booked today",
+        "book-now-btn": "Book Now",
 
+
+
+
+    
 
 
 

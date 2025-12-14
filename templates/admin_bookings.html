@@ -35,15 +35,24 @@
 <p class="d-none" id="error-loading-bookings">❌ خطأ في تحميل الحجوزات.</p>
 
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     const tableBody = document.querySelector("#bookings-table tbody");
+    const paginationDiv = document.createElement('div');
+    paginationDiv.className = 'mt-3 text-center';
+    tableBody.parentElement.parentElement.appendChild(paginationDiv); // تحت الجدول
 
-    async function loadBookings() {
+    let currentPage = 1;
+    let totalPages = 1;
+    const perPage = 40;
+
+    async function loadBookings(page = 1) {
+        currentPage = page;
         tableBody.innerHTML = `<tr><td colspan="7">${document.getElementById('loading-text')?.textContent || '⏳ جاري تحميل البيانات...'}</td></tr>`;
+
         try {
             const lang = localStorage.getItem('site-lang') || 'ar';
-            const token = localStorage.getItem('admin-token'); // أو اجلبه من الجلسة
-            const res = await fetch(`/api/admin/bookings?lang=${lang}`, {
+            const token = localStorage.getItem('admin-token');
+            const res = await fetch(`/api/admin/bookings?lang=${lang}&page=${page}&per_page=${perPage}`, {
                 credentials: "same-origin",
                 headers: { "Authorization": `Bearer ${token}` }
             });
@@ -52,8 +61,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             if (!result.data || result.data.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="7">${document.getElementById('no-bookings')?.textContent}</td></tr>`;
+                paginationDiv.innerHTML = '';
                 return;
             }
+
+            totalPages = result.total_pages || 1;
 
             const statusTranslation = {
                 "confirmed": document.getElementById('status-confirmed')?.textContent || "مؤكد",
@@ -75,13 +87,44 @@ document.addEventListener("DOMContentLoaded", async () => {
                 `;
                 tableBody.appendChild(row);
             });
+
+            // أزرار السابق و التالي مع أرقام الصفحات
+            let html = `
+                <button class="btn btn-sm btn-outline-primary mx-1 mb-1" ${currentPage === 1 ? 'disabled' : ''} id="prevPage">السابق</button>
+            `;
+
+            // أرقام الصفحات (مثلاً نعرض من 1 إلى totalPages)
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="btn btn-sm btn-outline-primary mx-1 mb-1 page-btn" data-page="${i}" ${i === currentPage ? 'disabled' : ''}>${i}</button>`;
+            }
+
+            html += `<button class="btn btn-sm btn-outline-primary mx-1 mb-1" ${currentPage === totalPages ? 'disabled' : ''} id="nextPage">التالي</button>`;
+
+            paginationDiv.innerHTML = html;
+
+            document.getElementById('prevPage')?.addEventListener('click', () => {
+                if (currentPage > 1) loadBookings(currentPage - 1);
+            });
+            document.getElementById('nextPage')?.addEventListener('click', () => {
+                if (currentPage < totalPages) loadBookings(currentPage + 1);
+            });
+
+            document.querySelectorAll('.page-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const pageNum = parseInt(btn.getAttribute('data-page'));
+                    loadBookings(pageNum);
+                });
+            });
+
         } catch (err) {
             console.error(err);
             tableBody.innerHTML = `<tr><td colspan="7" class="text-danger">${document.getElementById('error-loading-bookings')?.textContent}</td></tr>`;
+            paginationDiv.innerHTML = '';
         }
     }
 
     loadBookings();
 });
+
 </script>
 {% endblock %}

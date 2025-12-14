@@ -1,2 +1,15 @@
 fastapi
 uvicorn
+bcrypt
+jwt
+python-dotenv
+itsdangerous
+sqlalchemy
+slowapi
+pymysql
+fuzzywuzzy
+stripe
+apscheduler
+jinja2
+pydantic[email]
+langdetect

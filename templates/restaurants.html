@@ -16,8 +16,7 @@
                     <!-- البحث -->
                     <div class="mb-3 mt-2">
                         <div class="input-group">
-                            <input type="text" id="restaurant-search" class="form-control form-control-sm"
-                                placeholder="ابحث عن مطعم...">
+                            <input type="text" id="restaurant-search" class="form-control form-control-sm" placeholder="ابحث عن مطعم...">
                             <button id="search-btn" class="btn btn-primary btn-sm">بحث</button>
                         </div>
                     </div>
@@ -41,6 +40,9 @@
                 <div class="row" id="restaurant-list">
                     <!-- البطاقات ستُضاف هنا -->
                 </div>
+
+                <!-- Pagination -->
+                <div class="text-center mt-3" id="restaurant-pagination"></div>
             </div>
 
         </div>
@@ -62,8 +64,8 @@
 <p class="d-none" id="errorFetchMsg"></p>
 <p class="d-none" id="noRestaurantsMsg"></p>
 <p class="d-none" id="todayBookingsLabel"></p>
-
-
+<p class="d-none" id="pagination-prev"></p>
+<p class="d-none" id="pagination-next"></p>
 
 <script>
 $(document).ready(function() {
@@ -71,69 +73,117 @@ $(document).ready(function() {
     const cuisineFiltersDiv = document.getElementById("cuisine-filters");
     const areaFiltersDiv = document.getElementById("area-filters");
     const searchInput = document.getElementById("restaurant-search");
-    const searchPlaceholder = document.getElementById("searchPlaceholder")?.textContent || "ابحث عن مطعم...";
-    searchInput.placeholder = searchPlaceholder;
-
+    searchInput.placeholder = document.getElementById("searchPlaceholder")?.textContent || "ابحث عن مطعم...";
     const searchBtn = document.getElementById("search-btn");
     const lang = localStorage.getItem('site-lang') || 'ar';
 
-    // 🔹 جديد: البحث يشمل الاسم + المطبخ + المنطقة
+    // 🔹 Pagination variables
+    let allRestaurants = [];
+    let currentPage = 1;
+    const restaurantsPerPage = 9;
+
+    // 🔹 Fetch restaurants
     async function fetchRestaurants(searchQuery = "") {
         let cuisine = document.querySelector("input[name='cuisine']:checked")?.value || "";
         let area = document.querySelector("input[name='area']:checked")?.value || "";
 
-        let apiUrl = `/restaurants?lang=${lang}&limit=10`;
+        let apiUrl = `/restaurants?lang=${lang}`;
         if (cuisine) apiUrl += `&cuisine=${encodeURIComponent(cuisine)}`;
         if (area) apiUrl += `&area=${encodeURIComponent(area)}`;
-        if (searchQuery) apiUrl += `&search=${encodeURIComponent(searchQuery)}`; // 🔹 جديد
+        if (searchQuery) apiUrl += `&search=${encodeURIComponent(searchQuery)}`;
 
         try {
             const response = await fetch(apiUrl);
             const result = await response.json();
 
-            restaurantList.innerHTML = "";
-
-            (result.data || result).forEach(r => {
-                const cardHtml = `
-                    <div class="col-md-4 mb-4">
-                        <div class="card shadow-sm rounded h-100">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
-                                <small>${r.cuisine}</small>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area}</p>
-                                <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
-                                <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
-                                <p><strong>${document.getElementById('todayBookingsLabel')?.textContent || 'عدد الحجز اليوم'}:</strong> ${r.today_bookings}</p>
-
-
-
-                            </div>
-                            <div class="card-footer text-center">
-                                <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">
-                                    ${document.getElementById('bookNow')?.textContent || 'احجز الآن'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>`;
-                restaurantList.insertAdjacentHTML("beforeend", cardHtml);
-            });
-
-
-            if ((result.data || result).length === 0) {
-                restaurantList.innerHTML = `<p class="text-white text-center">${document.getElementById('noRestaurantsMsg')?.textContent || 'لا توجد مطاعم مطابقة للبحث.'}</p>`;
-
-            }
+            allRestaurants = result.data || result;
+            currentPage = 1;
+            displayRestaurants(currentPage);
 
         } catch (error) {
             console.error("خطأ في جلب البيانات:", error);
             restaurantList.innerHTML = `<div class="text-center text-white"><p>${document.getElementById('errorFetchMsg')?.textContent || 'حدث خطأ في جلب بيانات المطاعم.'}</p></div>`;
-
         }
     }
 
-    // 🔹 جلب الفلاتر من API
+    // 🔹 Display restaurants for a page
+    function displayRestaurants(page) {
+        restaurantList.innerHTML = "";
+        currentPage = page;
+
+        const start = (currentPage - 1) * restaurantsPerPage;
+        const end = start + restaurantsPerPage;
+        const restaurants = allRestaurants.slice(start, end);
+
+        if (restaurants.length === 0) {
+            restaurantList.innerHTML = `<p class="text-white text-center">${document.getElementById('noRestaurantsMsg')?.textContent || 'لا توجد مطاعم مطابقة للبحث.'}</p>`;
+            return;
+        }
+
+        restaurants.forEach(r => {
+            const cardHtml = `
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm rounded h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-1 fw-bold">${r.name}</h5>
+                            <small>${r.cuisine}</small>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-1"><strong>${document.getElementById('location')?.textContent || 'الموقع'}:</strong> ${r.area}</p>
+                            <p class="mb-1"><strong>${document.getElementById('hours')?.textContent || 'ساعات العمل'}:</strong> ${r.opens_at} - ${r.closes_at}</p>
+                            <p><strong>${document.getElementById('capacity')?.textContent || 'السعة'}:</strong> ${r.capacity} ${document.getElementById('guests')?.textContent || 'ضيف'}</p>
+                            <p><strong>${document.getElementById('todayBookingsLabel')?.textContent || 'عدد الحجز اليوم'}:</strong> ${r.today_bookings}</p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-warning fw-bold" onclick="window.location.href='/booking/${r.id}'">
+                                ${document.getElementById('bookNow')?.textContent || 'احجز الآن'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            restaurantList.insertAdjacentHTML("beforeend", cardHtml);
+        });
+
+        renderPagination();
+    }
+
+    // 🔹 Render Pagination buttons
+    function renderPagination() {
+        const paginationContainer = document.getElementById("restaurant-pagination");
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = "";
+        const totalPages = Math.ceil(allRestaurants.length / restaurantsPerPage);
+
+        if (totalPages <= 1) return;
+
+        // زر السابق
+        const prevBtn = document.createElement("button");
+        prevBtn.textContent = document.getElementById('pagination-prev')?.textContent || "السابق";
+        prevBtn.className = "btn btn-light me-1";
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => displayRestaurants(currentPage - 1);
+        paginationContainer.appendChild(prevBtn);
+
+        // أزرار الصفحات
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement("button");
+            pageBtn.textContent = i;
+            pageBtn.className = `btn me-1 ${i === currentPage ? "btn-dark text-white" : "btn-light"}`;
+            pageBtn.onclick = () => displayRestaurants(i);
+            paginationContainer.appendChild(pageBtn);
+        }
+
+        // زر التالي
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = document.getElementById('pagination-next')?.textContent || "التالي";
+        nextBtn.className = "btn btn-light";
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => displayRestaurants(currentPage + 1);
+        paginationContainer.appendChild(nextBtn);
+    }
+
+    // 🔹 Load filters from API
     async function loadFilters() {
         try {
             const res = await fetch(`/restaurants/filters?lang=${lang}`);
@@ -188,19 +238,17 @@ $(document).ready(function() {
         }
     }
 
-    // 🔹 تفعيل البحث عند الضغط على زر "بحث"
+    // 🔹 Search button
     searchBtn.addEventListener("click", () => {
         fetchRestaurants(searchInput.value.trim());
     });
 
-    // 🔹 تفعيل البحث عند الضغط على Enter في خانة البحث
+    // 🔹 Enter key search
     searchInput.addEventListener("keyup", (e) => {
-        if (e.key === "Enter") {
-            fetchRestaurants(searchInput.value.trim());
-        }
+        if (e.key === "Enter") fetchRestaurants(searchInput.value.trim());
     });
 
-    // 🔹 تحميل الفلاتر ثم المطاعم عند فتح الصفحة
+    // 🔹 Load filters and restaurants
     loadFilters().then(() => fetchRestaurants());
 });
 </script>

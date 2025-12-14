@@ -88,6 +88,8 @@
 <p class="d-none" id="bookingSuccess">✅ جاري تحويلك إلى صفحة الدفع...</p>
 <p class="d-none" id="bookingError">⚠️ حدث خطأ أثناء تنفيذ الحجز</p>
 <p class="d-none" id="connectionError">⚠️ خطأ في الاتصال بالخادم</p>
+<p class="d-none" id="bookingIdMissing">❌ معرف الحجز غير موجود!</p>
+<p class="d-none" id="loginRequired">⚠️ يجب تسجيل الدخول لإتمام الحجز.</p>
 
 <script>
     const select = document.getElementById('time');
@@ -120,7 +122,6 @@
     async function loadRestaurant(id) {
         infoDiv.innerHTML = `<p>${translateText('loadingRestaurant')}</p>`;
         try {
-            const lang = localStorage.getItem('site-lang') || 'ar';
             const res = await fetch(`/restaurants/${id}?lang=${lang}`);
             const data = await res.json();
             if (data.status === "success") {
@@ -130,9 +131,8 @@
                     <p class="text-muted">${r.cuisine} • ${r.area}</p>
                     <p>${translateText('restaurantHoursLabel')}: ${r.opens_at} - ${r.closes_at}</p>
                     <p id="restaurantCapacityValue">
-    ${translateText('restaurantCapacityLabel')}: ${r.capacity} ${lang === 'ar' ? 'شخص' : 'guests'}
-</p>
-
+                        ${translateText('restaurantCapacityLabel')}: ${r.capacity} ${lang === 'ar' ? 'شخص' : 'guests'}
+                    </p>
                 `;
             } else {
                 infoDiv.innerHTML = `<div class="alert alert-danger">${translateText('restaurantNotFound')}</div>`;
@@ -147,7 +147,7 @@
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        document.getElementById('submitBtn').disabled = true
+        document.getElementById('submitBtn').disabled = true;
 
         const formData = new FormData(form);
         const data = {
@@ -169,69 +169,68 @@
             const result = await res.json();
             message.innerHTML = "";
 
-            if (result.status === "success") {
-    message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess')}</div>`;
-    form.reset();
-
-    // تحقق من وجود booking_id
-    if (result.booking_id) {
-        // تحويل للصفحة pay مع booking_id
-        window.location = `/pay?s=${result.client_secret}`;
-    } else {
-        message.innerHTML = "<div class='alert alert-danger mt-3'>❌ معرف الحجز غير موجود!</div>";
-    }
-}
+            if (res.ok) {
+                if (result.status === "success") {
+                    message.innerHTML = `<div class="alert alert-success mt-3">${translateText('bookingSuccess')}</div>`;
+                    form.reset();
+                    if (result.booking_id) {
+                        window.location = `/pay?s=${result.client_secret}`;
+                    } else {
+                        message.innerHTML = `<div class='alert alert-danger mt-3'>${translateText('bookingIdMissing')}</div>`;
+                    }
+                }
+            } else {
+                // أي خطأ من الباكند يظهره مباشرة
+                message.innerHTML = `<div class="alert alert-danger mt-3">${result.detail || translateText('connectionError')}</div>`;
+            }
 
         } catch (err) {
             console.error(err);
             message.innerHTML = `<div class="alert alert-danger mt-3">${translateText('connectionError')}</div>`;
         } finally {
-            document.getElementById('submitBtn').disabled = false
+            document.getElementById('submitBtn').disabled = false;
         }
     });
-const dateInput = document.getElementById('date');
-const timeInput = document.getElementById('time');
-const availabilityDiv = document.getElementById('availabilityInfo');
 
-async function checkAvailability() {
-    const date = dateInput.value;
-    const time = timeInput.value;
+    const dateInput = document.getElementById('date');
+    const timeInput = document.getElementById('time');
+    const availabilityDiv = document.getElementById('availabilityInfo');
 
-    // إذا التاريخ أو الوقت فارغ، نمسح النص
-    if (!date || !time) {
-        availabilityDiv.textContent = "";
-        return;
-    }
+    async function checkAvailability() {
+        const date = dateInput.value;
+        const time = timeInput.value;
 
-    try {
-        const res = await fetch(`/availability?restaurant_id=${restaurantIdNum}&date=${date}&time=${time}`);
-        const data = await res.json();
-
-        availabilityDiv.style.color = "black"; // النص دايم أسود
-
-        if (data.status === "success") {
-            const remaining = data.remaining;
-            if (remaining > 0) {
-                availabilityDiv.innerHTML = translateText('availabilityRemaining').replace('{remaining}', remaining);
-            } else {
-                availabilityDiv.innerHTML = translateText('availabilityFull');
-            }
-        } else {
-            availabilityDiv.innerHTML = translateText('availabilityCheckError');
+        if (!date || !time) {
+            availabilityDiv.textContent = "";
+            return;
         }
 
-    } catch (err) {
-        console.error(err);
-        availabilityDiv.style.color = "black";
-        availabilityDiv.innerHTML = translateText('availabilityConnectionError');
+        try {
+            const res = await fetch(`/availability?restaurant_id=${restaurantIdNum}&date=${date}&time=${time}`);
+            const data = await res.json();
+
+            availabilityDiv.style.color = "black";
+
+            if (data.status === "success") {
+                const remaining = data.remaining;
+                if (remaining > 0) {
+                    availabilityDiv.innerHTML = translateText('availabilityRemaining').replace('{remaining}', remaining);
+                } else {
+                    availabilityDiv.innerHTML = translateText('availabilityFull');
+                }
+            } else {
+                availabilityDiv.innerHTML = translateText('availabilityCheckError');
+            }
+
+        } catch (err) {
+            console.error(err);
+            availabilityDiv.style.color = "black";
+            availabilityDiv.innerHTML = translateText('availabilityConnectionError');
+        }
     }
-}
 
-// تفعيل الفحص عند تغيير التاريخ أو الوقت
-dateInput.addEventListener('change', checkAvailability);
-timeInput.addEventListener('change', checkAvailability);
-
-
+    dateInput.addEventListener('change', checkAvailability);
+    timeInput.addEventListener('change', checkAvailability);
 </script>
 <!-- RESTAURANTS SECTION -->
 <section class="brand-bg py-5" id="restaurants-section">
